@@ -7,8 +7,8 @@ Site statique d'Artisan Pisciniste (Olivier Rousseau, Elven, Morbihan) : HTML, C
 1. hPanel › Sites web › Gérer › **GIT** : dépôt `https://github.com/michelruiz56380-afk/artisan-pisciniste.git`, branche `main`, répertoire d'installation vide (= `public_html`).
    Le répertoire doit être vide avant le premier déploiement : sauvegarder puis vider l'ancien contenu.
 2. Activer le **déploiement automatique** (webhook GitHub) pour que chaque modification poussée sur `main` soit mise en ligne.
-3. Créer sur le serveur, à côté de `contact.php`, le fichier `contact-config.php` à partir de `contact-config.exemple.php`, avec l'adresse qui reçoit les demandes. Ce fichier n'est volontairement pas dans Git.
-4. Créer la boîte `site@artisan-pisciniste.fr` (hPanel › E-mails), utilisée comme expéditeur du formulaire.
+3. Le formulaire envoie les demandes à l'adresse indiquée dans `contact-config.php` (dans le dépôt, sans mot de passe, bloqué en lecture par `.htaccess`).
+4. L'expéditeur doit être une boîte existante du domaine (actuellement olivier@artisan-pisciniste.fr).
 5. Vérifier le certificat SSL, puis soumettre `https://artisan-pisciniste.fr/sitemap.xml` dans la Google Search Console.
 
 ## Adresses
