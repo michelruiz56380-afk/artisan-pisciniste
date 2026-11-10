@@ -1,0 +1,922 @@
+<title>Artisan Pisciniste</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap">
+<style>
+/* Layout: Apple-style alternating bands. Deep navy-water bands (fixed dark, both themes) carry the effects; paper bands carry information. Colors drawn from the logo: navy ring, swimmer blue, plus pool lagoon. */
+:root{
+  --paper:#ffffff;
+  --mist:#f2f4f8;
+  --ink:#0c1222;
+  --ink-2:#5a6478;
+  --line:#e0e4ec;
+  --brand:#4f70ff;
+  --brand-ink:#ffffff;
+  --link:#3b5cf0;
+  --navy:#1b2a78;
+  --deep:#050a1f;
+  --deep-2:#0b1a45;
+  --lagoon:#46c9e6;
+  --on-deep:#f3f6ff;
+  --on-deep-2:#a3adc9;
+  --card:#ffffff;
+  --nav-bg:rgba(255,255,255,.72);
+  --nav-ink:#0c1222;
+  --star:#f4b400;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Geist",system-ui,"Segoe UI",sans-serif;
+  --text:-apple-system,BlinkMacSystemFont,"SF Pro Text","Geist",system-ui,"Segoe UI",sans-serif;
+  --gl:max(16px,env(safe-area-inset-left,0px));
+  --gr:max(16px,env(safe-area-inset-right,0px));
+  --navh:52px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#000000;--mist:#0b0f1a;--ink:#f1f4fb;--ink-2:#99a3ba;--line:#1d2436;--link:#8ea3ff;--card:#10162a;--nav-bg:rgba(8,10,20,.7);--nav-ink:#f1f4fb;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#000000;--mist:#0b0f1a;--ink:#f1f4fb;--ink-2:#99a3ba;--line:#1d2436;--link:#8ea3ff;--card:#10162a;--nav-bg:rgba(8,10,20,.7);--nav-ink:#f1f4fb;color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--text);font-size:17px;line-height:1.47;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;overflow-x:clip}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--deep)}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--lagoon);outline-offset:3px;border-radius:6px}
+img{display:block;max-width:100%}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.028em}
+p{margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding-left:var(--gl);padding-right:var(--gr)}
+.band{padding-block:clamp(80px,11vw,150px)}
+.deep{background:var(--deep);color:var(--on-deep)}
+.mist{background:var(--mist)}
+.eyebrow{font-size:14px;font-weight:600;letter-spacing:.01em;color:var(--link)}
+.deep .eyebrow{color:var(--lagoon)}
+.lede{font-size:clamp(19px,2.1vw,24px);line-height:1.38;color:var(--ink-2);max-width:42ch}
+.deep .lede{color:var(--on-deep-2)}
+.h-xl{font-size:clamp(46px,8.6vw,108px);font-weight:700;line-height:1}
+.h-l{font-size:clamp(36px,5.8vw,68px);font-weight:700;line-height:1.04}
+.head{display:grid;gap:18px;margin-bottom:clamp(40px,6vw,72px)}
+.head.center{text-align:center;justify-items:center}
+
+.pill{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:980px;font:500 17px var(--text);border:0;cursor:pointer;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;will-change:transform}
+.pill:hover{text-decoration:none;box-shadow:0 10px 30px -10px rgba(79,112,255,.6)}
+.pill:active{transform:scale(.97)!important}
+.pill-brand{background:var(--brand);color:var(--brand-ink)}
+.pill-ink{background:var(--ink);color:var(--paper)}
+.pill-glass{background:rgba(255,255,255,.14);color:#fff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.more{font-size:17px;font-weight:500}
+.more::after{content:" ›"}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:50;transition:background .4s,border-color .4s;border-bottom:1px solid transparent}
+.nav .wrap{display:flex;align-items:center;gap:28px;height:var(--navh)}
+.nav.solid{background:var(--nav-bg);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-color:var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;color:#fff;transition:color .4s}
+.brand:hover{text-decoration:none}
+.brand img{width:30px;height:30px}
+.nav ul{display:flex;gap:26px;list-style:none;margin:0 0 0 auto;padding:0}
+.nav ul a{color:#fff;opacity:.85;font-size:13px;transition:color .4s,opacity .2s}
+.nav ul a:hover{opacity:1;text-decoration:none}
+.nav.solid .brand,.nav.solid ul a{color:var(--nav-ink)}
+.nav .pill{padding:7px 15px;font-size:13px}
+@media (max-width:1180px){.nav ul{display:none}.nav .pill{margin-left:auto}}
+.nav ul a{white-space:nowrap}
+
+/* ---------- hero ---------- */
+.hero{position:relative;height:clamp(640px,100svh,1000px);overflow:hidden;color:#fff;isolation:isolate;display:grid;place-items:center;text-align:center;background:var(--deep)}
+.hero .hero-img,.hero canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.hero canvas{opacity:0;transition:opacity 1.2s}
+.hero canvas.on{opacity:1}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(5,10,31,.78) 0%,rgba(5,10,31,.42) 38%,rgba(5,10,31,.25) 62%,var(--deep) 100%)}
+.hero .inner{display:grid;justify-items:center;gap:22px;padding-top:var(--navh)}
+.badge{width:clamp(78px,9vw,104px);filter:drop-shadow(0 18px 40px rgba(0,0,0,.45))}
+.hero h1{max-width:13ch}
+.line{display:block;overflow:hidden;padding-bottom:.06em}
+.line>span{display:inline-block}
+.hero .lede{color:rgba(255,255,255,.86);max-width:46ch;text-shadow:0 1px 20px rgba(0,0,0,.35)}
+.ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.hint{position:absolute;bottom:clamp(20px,4vh,40px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.75);white-space:nowrap}
+.hint i{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;position:relative}
+.hint i::after{content:"";position:absolute;inset:-1.5px;border-radius:50%;border:1.5px solid currentColor}
+@media (prefers-reduced-motion:no-preference){
+  .badge{animation:badge 1.4s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes badge{from{opacity:.001;transform:scale(.6) rotate(-40deg)}to{opacity:1;transform:none}}
+  .line>span{animation:lineup 1.1s cubic-bezier(.2,.8,.2,1) both}
+  .line:nth-child(2)>span{animation-delay:.1s}
+  @keyframes lineup{from{transform:translateY(105%)}to{transform:none}}
+  .fade{animation:fade 1.2s .35s cubic-bezier(.2,.8,.2,1) both}
+  .fade.d2{animation-delay:.5s}
+  @keyframes fade{from{opacity:.001;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .hint i::after{animation:ping 2.2s ease-out infinite}
+  @keyframes ping{from{transform:scale(1);opacity:.9}to{transform:scale(2.2);opacity:0}}
+}
+
+/* ---------- facts ---------- */
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;padding-block:20px clamp(70px,9vw,110px)}
+.facts div{min-width:0;border-top:1px solid rgba(255,255,255,.14);padding-top:22px}
+.facts b{display:block;font-family:var(--display);font-size:clamp(34px,4.4vw,52px);font-weight:650;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1.05}
+.facts div>span{font-size:15px;color:var(--on-deep-2)}
+.facts b span{font:inherit;color:inherit;letter-spacing:inherit}
+@media (max-width:760px){.facts{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:28px}}
+
+/* ---------- bento ---------- */
+.bento{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.tile{position:relative;background:var(--mist);border-radius:26px;overflow:hidden;padding:30px;display:flex;flex-direction:column;gap:10px;min-height:250px;min-width:0;isolation:isolate}
+.tile::before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;transition:opacity .4s;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(79,112,255,.16),transparent 60%)}
+.tile:hover::before{opacity:1}
+.tile h3{font-size:clamp(22px,2.2vw,28px);font-weight:650}
+.tile p{color:var(--ink-2);font-size:16px;max-width:34ch}
+.tag{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2)}
+.t-hero{grid-column:span 4;grid-row:span 2;padding:0;min-height:540px;color:#fff;background:#0b1a45}
+.t-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform 1.4s cubic-bezier(.2,.8,.2,1)}
+.t-hero:hover img{transform:scale(1.05)}
+.t-hero .cap{margin-top:auto;padding:30px;background:linear-gradient(transparent,rgba(5,10,31,.85));display:grid;gap:8px}
+.t-hero .cap p{color:rgba(255,255,255,.84)}
+.t-hero .tag{color:var(--lagoon)}
+.span2{grid-column:span 2}
+.glyph{width:40px;height:40px;margin-bottom:auto;color:var(--brand)}
+@media (max-width:900px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.t-hero{grid-column:span 2;min-height:440px}.span2{grid-column:span 1}}
+@media (max-width:560px){.span2{grid-column:span 2}.tile{min-height:0}.t-hero{min-height:420px}.glyph{margin-bottom:12px}}
+
+/* ---------- story (pinned build sequence) ---------- */
+.story{position:relative;height:520vh}
+.story .pin{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--navh));height:calc(100svh - var(--navh));display:grid;align-items:center;overflow:hidden}
+.story .grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(24px,5vw,72px);align-items:center}
+.story ol{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:4px;counter-reset:s}
+.story li{padding:12px 0 12px 18px;border-left:2px solid rgba(255,255,255,.14);opacity:.42;transition:opacity .5s,border-color .5s}
+.story li.on{opacity:1;border-color:var(--lagoon)}
+.story li::before{content:attr(data-n);font:600 13px var(--text);color:var(--lagoon);font-variant-numeric:tabular-nums;margin-right:10px}
+.story li b{font-family:var(--display);font-size:clamp(18px,1.8vw,22px);font-weight:650;letter-spacing:-.015em}
+.story li p{font-size:15px;color:var(--on-deep-2);margin-top:4px;max-height:0;overflow:hidden;transition:max-height .5s}
+.story li.on p{max-height:80px}
+.story svg{width:100%;height:auto;overflow:visible}
+.progress{height:2px;background:rgba(255,255,255,.12);border-radius:2px;margin-top:24px;overflow:hidden}
+.progress span{display:block;height:100%;width:100%;background:var(--lagoon);transform-origin:left;transform:scaleX(var(--p,0))}
+@media (max-width:820px){
+  .story{height:480vh}
+  .story .grid{grid-template-columns:1fr;gap:8px}
+  .story .h-l{font-size:30px}
+  .story .txt{order:2}
+  .story ol{margin-top:12px}
+  .story li{padding:6px 0 6px 14px}
+  .story li:not(.on){display:none}
+}
+.story.static{height:auto}
+.story.static .pin{position:relative;height:auto;padding-block:100px}
+.story.static li{opacity:1}
+.story.static li p{max-height:none}
+.story.static li:not(.on){display:block}
+
+/* ---------- mini piscine 3D ---------- */
+.product{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,5vw,72px);align-items:center}
+@media (max-width:880px){.product{grid-template-columns:1fr}}
+.price{font-family:var(--display);font-size:clamp(24px,2.6vw,30px);font-weight:500}
+.price small{font-size:15px;color:var(--ink-2);font-weight:400}
+.stage{position:relative;background:radial-gradient(120% 90% at 50% 20%,var(--card),var(--mist));border-radius:32px;aspect-ratio:5/4;max-width:100%;overflow:hidden;box-shadow:0 1px 0 var(--line),0 40px 80px -50px rgba(5,10,31,.5)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:pan-y}
+.stage canvas:active{cursor:grabbing}
+.stage .fallback{position:absolute;inset:8%;display:grid;place-items:center}
+.stage .fallback svg{width:100%}
+.stage .drag{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:12px;color:var(--ink-2);background:var(--card);padding:6px 12px;border-radius:99px;box-shadow:0 0 0 1px var(--line);white-space:nowrap;pointer-events:none}
+.swatches{display:flex;gap:14px;align-items:center;margin-top:20px;flex-wrap:wrap;justify-content:center}
+.swatches .lab{font-size:14px;color:var(--ink-2);min-width:8ch;text-align:right}
+.sw{width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);outline-offset:3px;transition:transform .25s}
+.sw[aria-pressed="true"]{outline:2px solid var(--brand)}
+.sw:hover{transform:scale(1.12)}
+.specs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:clamp(40px,6vw,64px);border-top:1px solid var(--line)}
+.specs div{padding:18px 16px 18px 0;border-bottom:1px solid var(--line);min-width:0}
+.specs b{display:block;font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.specs span{font-size:14px;color:var(--ink-2)}
+@media (max-width:640px){.specs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fine{font-size:12px;color:var(--ink-2);margin-top:18px;line-height:1.5;max-width:90ch}
+.tanna-photo{margin:clamp(40px,6vw,64px) 0 0;border-radius:28px;overflow:hidden;position:relative}
+.tanna-photo img{width:100%;aspect-ratio:21/9;object-fit:cover}
+.tanna-photo figcaption{position:absolute;left:24px;bottom:20px;color:#fff;font:600 17px var(--text);text-shadow:0 1px 12px rgba(0,0,0,.5)}
+@media (max-width:640px){.tanna-photo img{aspect-ratio:4/3}}
+.product-ctas{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-top:28px}
+
+/* ---------- horizontal gallery ---------- */
+.gal{position:relative;height:340vh}
+.gal .pin{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--navh));height:calc(100svh - var(--navh));display:flex;flex-direction:column;justify-content:center;gap:clamp(24px,4vh,44px);overflow:hidden}
+.track{display:flex;gap:20px;padding-left:max(var(--gl),calc((100vw - 1100px)/2 + 16px));padding-right:var(--gr);will-change:transform}
+.shot{flex:0 0 auto;width:min(68vw,820px);margin:0;position:relative;border-radius:28px;overflow:hidden;background:var(--mist)}
+.shot img{width:100%;aspect-ratio:3/2;object-fit:cover;transform:scale(1.12) translateX(calc(var(--sx,0) * -4%));transition:transform .1s linear}
+.shot figcaption{position:absolute;left:0;right:0;bottom:0;padding:22px 26px;color:#fff;font-size:15px;background:linear-gradient(transparent,rgba(5,10,31,.75))}
+.shot figcaption b{display:block;font-family:var(--display);font-size:22px;letter-spacing:-.02em}
+.shot.cta{display:grid;place-items:center;text-align:center;background:var(--brand);color:#fff;aspect-ratio:3/2;padding:30px}
+.shot.cta h3{font-size:clamp(28px,3.4vw,44px);font-weight:700;margin-bottom:20px}
+.gal.static{height:auto}
+.gal.static .pin{position:relative;height:auto;padding-block:90px}
+.gal.static .track{overflow-x:auto;scroll-snap-type:x mandatory;transform:none!important;padding-bottom:10px}
+.gal.static .shot{scroll-snap-align:start;width:min(84vw,820px)}
+
+/* ---------- AR ---------- */
+.ar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(32px,6vw,90px);align-items:center}
+.ar .lede{margin-top:20px}
+.qr{background:#fff;padding:18px;border-radius:28px;width:min(260px,70vw);box-shadow:0 0 0 1px rgba(255,255,255,.1),0 30px 90px -20px rgba(70,201,230,.5);transform:perspective(800px) rotateY(var(--ry,0deg)) rotateX(var(--rx,0deg));transition:transform .2s}
+.qr img{width:100%;image-rendering:pixelated}
+.qr p{color:#33405a;font-size:13px;text-align:center;margin-top:10px}
+@media (max-width:760px){.ar{grid-template-columns:1fr;justify-items:start}}
+
+/* ---------- reviews ---------- */
+.reveal-quote{font-family:var(--display);font-size:clamp(28px,4.2vw,52px);line-height:1.14;font-weight:650;letter-spacing:-.03em;max-width:24ch;margin:0 auto;text-align:center;text-wrap:balance}
+.reveal-quote .w{opacity:var(--o,1);transition:opacity .25s}
+.qmeta{margin-top:22px;text-align:center;color:var(--ink-2);font-size:15px}
+.gbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:center;margin:clamp(48px,7vw,80px) auto 32px;color:var(--ink-2);font-size:15px}
+.gbar .g{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:600}
+.gbar svg{width:20px;height:20px}
+.marquee{display:grid;gap:16px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.row{display:flex;gap:16px;width:max-content}
+.row:hover{animation-play-state:paused}
+@media (prefers-reduced-motion:no-preference){
+  .row{animation:slide var(--dur,70s) linear infinite}
+  .row.rev{animation-direction:reverse}
+  @keyframes slide{to{transform:translateX(-50%)}}
+}
+@media (prefers-reduced-motion:reduce){.marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none}}
+.rv{width:min(380px,82vw);background:var(--card);border:1px solid var(--line);border-radius:24px;padding:24px 26px;display:flex;flex-direction:column;gap:12px;flex:0 0 auto}
+.rv header{display:flex;align-items:center;gap:12px}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;flex:0 0 auto;font-size:15px}
+.rv .who{display:grid;line-height:1.25;min-width:0}
+.rv .who b{font-size:15px}
+.rv .who span{font-size:12px;color:var(--ink-2)}
+.stars{color:var(--star);letter-spacing:2px;font-size:14px}
+.rv p{font-size:15px;line-height:1.5;color:var(--ink)}
+.rv .svc{margin-top:auto;font-size:12px;color:var(--ink-2)}
+.disclose{text-align:center;font-size:13px;color:var(--ink-2);margin-top:28px;max-width:70ch;margin-inline:auto}
+
+/* ---------- about ---------- */
+.about{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,6vw,80px);align-items:center}
+@media (max-width:820px){.about{grid-template-columns:1fr}}
+.portrait-photo{margin:0;border-radius:28px;overflow:hidden;background:#fff;position:relative;box-shadow:0 40px 80px -50px rgba(5,10,31,.45)}
+.portrait-photo img{width:100%;aspect-ratio:1231/1277;object-fit:cover}
+.portrait-photo figcaption{position:absolute;left:0;right:0;bottom:0;padding:40px 22px 18px;font-size:13px;color:#fff;background:linear-gradient(transparent,rgba(5,10,31,.7))}
+.portrait{aspect-ratio:4/5;border-radius:28px;border:1.5px dashed var(--line);background:var(--paper);display:grid;place-items:center;text-align:center;padding:24px;color:var(--ink-2);font-size:14px}
+.portrait b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+.portrait img{width:72px;margin:0 auto 14px;opacity:.9}
+blockquote{margin:0;font-family:var(--display);font-size:clamp(26px,3.4vw,40px);line-height:1.15;font-weight:600;letter-spacing:-.025em;text-wrap:balance}
+.about p.body{margin-top:24px;color:var(--ink-2);max-width:52ch}
+.sig{margin-top:24px;font-weight:600}
+.sig span{display:block;font-weight:400;color:var(--ink-2);font-size:15px}
+
+/* ---------- journal ---------- */
+.journal{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--line)}
+.journal a{display:grid;gap:8px;padding:28px 24px 28px 0;border-bottom:1px solid var(--line);color:var(--ink);min-width:0}
+.journal a:nth-child(even){padding-left:24px;border-left:1px solid var(--line)}
+.journal a:hover{text-decoration:none}
+.journal a:hover h3{color:var(--link)}
+.journal h3{font-size:21px;font-weight:600;letter-spacing:-.015em;line-height:1.25;transition:color .2s}
+@media (max-width:700px){.journal{grid-template-columns:1fr}.journal a:nth-child(even){padding-left:0;border-left:0}}
+
+/* ---------- contact ---------- */
+.contact{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(32px,6vw,80px)}
+@media (max-width:860px){.contact{grid-template-columns:1fr}}
+.coord{display:grid;gap:26px;margin:36px 0 0}
+.coord dt{font-size:13px;color:var(--ink-2);margin-bottom:4px}
+.coord dd{margin:0;font-size:19px;font-weight:500}
+.copy{margin-left:10px;font:500 13px var(--text);color:var(--link);background:none;border:0;cursor:pointer;padding:0}
+form{background:var(--card);border-radius:28px;padding:clamp(22px,3.5vw,40px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;border:1px solid var(--line)}
+form .full{grid-column:1/-1}
+@media (max-width:520px){form{grid-template-columns:1fr}}
+label{display:grid;gap:6px;align-content:start;font-size:13px;color:var(--ink-2);min-width:0}
+input,textarea{font:inherit;font-size:17px;color:var(--ink);background:var(--mist);border:1px solid transparent;border-radius:12px;padding:13px 14px;width:100%;transition:border-color .2s,background .2s}
+input:focus,textarea:focus{outline:none;border-color:var(--brand);background:var(--paper)}
+.req{color:#d93a3a;text-decoration:none;font-weight:600}
+.err{color:#d93a3a;font-size:13px;min-height:0}
+.err:empty{display:none}
+[aria-invalid="true"]{border-color:#d93a3a!important;background:var(--paper)}
+.reqnote{font-size:12px;color:var(--ink-2);margin:-4px 0 0}
+textarea{min-height:120px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips input{position:absolute;opacity:0;width:1px;height:1px}
+.chips label{display:inline-flex;padding:8px 14px;border-radius:980px;border:1px solid var(--line);color:var(--ink);font-size:14px;cursor:pointer;transition:all .2s}
+.chips input:checked + label{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chips input:focus-visible + label{outline:2px solid var(--lagoon);outline-offset:2px}
+form .pill{justify-self:start}
+.sent{grid-column:1/-1;font-size:14px;color:var(--ink-2)}
+
+footer{background:var(--mist);font-size:12px;color:var(--ink-2);padding-block:32px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 24px;justify-content:space-between;align-items:center}
+footer .fb{display:flex;align-items:center;gap:12px}
+footer img{width:36px}
+
+/* generic scroll-in (content is visible at rest; motion only adds) */
+@media (prefers-reduced-motion:no-preference){
+  .up{transition:transform 1s cubic-bezier(.2,.8,.2,1),opacity 1s;}
+  .js .up:not(.in){transform:translateY(28px);opacity:.4}
+}
+
+/* ---------- interlocuteur unique (roles converge into one person) ---------- */
+.solo{position:relative;height:260vh}
+.solo .pin{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--navh));min-height:calc(100svh - var(--navh));display:grid;align-items:center;padding-block:32px;overflow:hidden}
+.solo-in{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);grid-template-areas:"head head" "orbit txt";gap:24px clamp(24px,5vw,64px);align-items:center}
+.solo-head{grid-area:head}
+.orbit{grid-area:orbit;position:relative;height:clamp(320px,46vh,440px);--k:1;--sx:min(19vw,230px);--sy:clamp(70px,11vh,120px)}
+.role{position:absolute;left:50%;top:50%;white-space:nowrap;padding:10px 18px;border-radius:99px;font:600 15px var(--text);color:var(--on-deep);background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transform:translate(calc(-50% + var(--x) * var(--k) * var(--sx)),calc(-50% + var(--y) * var(--k) * var(--sy))) scale(calc(.55 + .45 * var(--k)));opacity:calc(.08 + .92 * var(--k));will-change:transform}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(calc(1.12 - .22 * var(--k)));display:grid;justify-items:center;gap:6px;text-align:center;width:220px;z-index:1}
+.core img{width:96px;height:96px;filter:drop-shadow(0 0 calc(50px - 30px * var(--k)) rgba(79,112,255,.9))}
+.core b{font-family:var(--display);font-size:22px;letter-spacing:-.02em}
+.core span{font-size:13px;color:var(--on-deep-2);opacity:calc(1 - var(--k) * .6)}
+.solo-txt{grid-area:txt;display:grid;gap:22px}
+.solo-list{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.solo-list li{padding-left:28px;position:relative;color:var(--on-deep-2);font-size:16px}
+.solo-list li::before{content:"";position:absolute;left:0;top:.35em;width:14px;height:14px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(79,112,255,.25)}
+.solo-list b{color:var(--on-deep);font-weight:600}
+.solo-quote{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.015em;border-left:2px solid var(--lagoon);padding-left:16px}
+.solo-quote span{display:block;font:400 13px var(--text);color:var(--on-deep-2);margin-top:6px}
+@media (max-width:860px){
+  .solo{height:auto}
+  .solo .pin{position:relative;min-height:0;padding-block:90px}
+  .solo-in{grid-template-columns:1fr;grid-template-areas:"head" "orbit" "txt"}
+  .orbit{height:300px;--sx:30vw;--sy:92px}
+  .role{font-size:13px;padding:8px 13px}
+}
+.solo.static{height:auto}
+.solo.static .pin{position:relative;min-height:0;padding-block:110px}
+.story-note{margin-top:18px;font-size:14px;color:var(--on-deep-2)}
+.story-note b{color:var(--on-deep)}
+</style>
+
+<nav class="nav" id="nav" aria-label="Navigation principale">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="{{logo}}" alt="">Artisan Pisciniste</a>
+    <ul>
+      <li><a href="#savoir-faire">Savoir-faire</a></li>
+      <li><a href="#interlocuteur">Interlocuteur unique</a></li>
+      <li><a href="#projet">Votre projet</a></li>
+      <li><a href="#mini-piscine">Mini piscine</a></li>
+      <li><a href="#avis">Avis clients</a></li>
+      <li><a href="#journal">Conseils</a></li>
+    </ul>
+    <a class="pill pill-brand" href="#contact">Devis gratuit</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <img class="hero-img" src="{{hero}}" alt="">
+  <canvas id="water" aria-hidden="true"></canvas>
+  <div class="wrap inner">
+    <img class="badge" src="{{logo}}" alt="Logo Artisan Pisciniste">
+    <h1 class="h-xl"><span class="line"><span>L'eau, travaillée</span></span><span class="line"><span>à la main.</span></span></h1>
+    <p class="lede fade">Depuis plus de 25 ans, Olivier Rousseau conçoit, construit et rénove des piscines dans le Morbihan. Et c'est lui, et lui seul, qui suit votre projet du premier rendez-vous à la mise en eau.</p>
+    <div class="ctas fade d2">
+      <a class="pill pill-brand mag" href="#contact">Demander un devis</a>
+      <a class="pill pill-glass mag" href="#mini-piscine">Voir la mini piscine</a>
+    </div>
+  </div>
+  <div class="hint" id="hint"><i></i><span>Passez la main sur l'eau</span></div>
+</header>
+
+<section class="deep">
+  <div class="wrap facts" id="facts">
+    <div><b><span data-count="25">25</span>&nbsp;ans</b><span>de chantiers piscine dans le Morbihan</span></div>
+    <div><b data-count="4">4</b><span>techniques : coque, béton, liner, membrane armée</span></div>
+    <div><b>A&nbsp;à&nbsp;Z</b><span>l'expression qui revient dans trois avis Google</span></div>
+    <div><b data-count="1">1</b><span>seul interlocuteur, du devis au suivi après chantier</span></div>
+  </div>
+</section>
+
+<main>
+<section class="band" id="savoir-faire">
+  <div class="wrap">
+    <div class="head up">
+      <span class="eyebrow">Savoir-faire</span>
+      <h2 class="h-l">Une piscine.<br>Quatre façons de la construire.</h2>
+      <p class="lede">Chaque terrain, chaque budget appelle une technique différente. Olivier vous conseille celle qui convient à votre jardin.</p>
+    </div>
+    <div class="bento">
+      <article class="tile t-hero up">
+        <img src="{{rect}}" alt="Piscine coque rectangulaire posée dans un jardin engazonné">
+        <div class="cap">
+          <span class="tag">Partenaire France Piscine Composite</span>
+          <h3>Coque polyester</h3>
+          <p>Fabriquée en France, livrée en une pièce et souvent installée en moins d'une semaine.</p>
+        </div>
+      </article>
+      <article class="tile span2 up">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="9" width="30" height="22" rx="2"/><path d="M5 17h30M15 9v8M25 17v14"/></svg>
+        <h3>Béton</h3><p>Forme et dimensions libres, pour les projets entièrement sur mesure.</p>
+      </article>
+      <article class="tile span2 up">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 12c4 0 5-3 9-3s5 3 9 3 5-3 9-3M6 20c4 0 5-3 9-3s5 3 9 3 5-3 9-3M6 28c4 0 5-3 9-3s5 3 9 3 5-3 9-3"/></svg>
+        <h3>Liner</h3><p>Pose sur bassin neuf ou remplacement, de la vidange à la remise en route.</p>
+      </article>
+      <article class="tile span2 up">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 10h28v20H6z"/><path d="M6 16h28M6 22h28M12 10v20M20 10v20M28 10v20" opacity=".5"/></svg>
+        <h3>Membrane armée</h3><p>Soudée sur place, pour les bassins neufs comme pour les rénovations.</p>
+      </article>
+      <article class="tile span2 up">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="14" cy="22" r="7"/><path d="M21 22h13M34 22v-9M14 15V6M8 34h24"/></svg>
+        <h3>Local technique</h3><p>Filtration, pompes, passage des réseaux et optimisation hydraulique.</p>
+      </article>
+      <article class="tile span2 up">
+        <svg class="glyph" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="12" y="5" width="16" height="30" rx="4"/><path d="M17 29h6M16 14a6 6 0 0 1 8 0M18.5 17.5a2.5 2.5 0 0 1 3 0"/></svg>
+        <h3>Domotique</h3><p>Pilotage de l'équipement de votre piscine depuis votre téléphone.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="deep solo" id="interlocuteur">
+  <div class="pin">
+    <div class="wrap solo-in">
+      <div class="solo-head">
+        <span class="eyebrow">Interlocuteur unique</span>
+        <h2 class="h-l">Cinq métiers.<br>Une seule personne.</h2>
+      </div>
+      <div class="orbit" id="orbit" aria-hidden="true">
+        <span class="role" style="--x:-1;--y:-.75">Le commercial</span>
+        <span class="role" style="--x:1;--y:-.75">Le technicien</span>
+        <span class="role" style="--x:-1.15;--y:.55">Le maître d'œuvre</span>
+        <span class="role" style="--x:1.15;--y:.55">L'homme de terrain</span>
+        <span class="role" style="--x:0;--y:1.15">Le suivi après chantier</span>
+        <div class="core"><img src="{{logo}}" alt=""><b>Olivier Rousseau</b><span>du premier rendez-vous au suivi après chantier</span></div>
+      </div>
+      <div class="solo-txt">
+        <p class="lede">Sur beaucoup de projets de piscine, un commercial vend, un conducteur de travaux organise, des sous-traitants posent et un service après-vente répond. Chez Artisan Pisciniste, c'est Olivier, du début à la fin.</p>
+        <ul class="solo-list">
+          <li><b>Il connaît votre projet par cœur.</b> Ce qui a été dit au premier rendez-vous est appliqué sur le chantier.</li>
+          <li><b>Vous savez toujours qui appeler.</b> Un seul numéro, la même personne, avant, pendant et après les travaux.</li>
+          <li><b>Il s'engage sur son propre travail.</b> Celui qui vous conseille est celui qui réalise, puis qui assure le suivi.</li>
+        </ul>
+        <p class="solo-quote">« Un seul interlocuteur du début à la fin, toujours disponible et réactif. »<span>Fatal Family, avis Google</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="deep story" id="projet">
+  <div class="pin">
+    <div class="wrap grid">
+      <div class="txt">
+        <span class="eyebrow">Votre projet</span>
+        <h2 class="h-l" style="margin-top:12px">Du terrain nu à la première baignade.</h2>
+        <ol id="steps">
+          <li class="on" data-n="01"><b>Visite du terrain</b><p>Accès, nature du sol, ensoleillement, raccordements : tout se décide sur place.</p></li>
+          <li data-n="02"><b>Devis détaillé</b><p>Technique, dimensions, équipements. Chaque poste chiffré.</p></li>
+          <li data-n="03"><b>Terrassement</b><p>Implantation, fouille et préparation du fond de forme.</p></li>
+          <li data-n="04"><b>Pose et réseaux</b><p>Bassin, local technique, filtration et raccordements hydrauliques.</p></li>
+          <li data-n="05"><b>Mise en eau</b><p>Remplissage, mise en service et prise en main de votre installation.</p></li>
+        </ol>
+        <div class="progress"><span id="prog"></span></div>
+        <p class="story-note">Cinq étapes, <b>un seul interlocuteur : Olivier</b>.</p>
+      </div>
+      <svg viewBox="0 0 800 420" role="img" aria-label="Coupe d'un chantier de piscine qui se construit étape par étape">
+        <defs>
+          <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a3727"/><stop offset="1" stop-color="#1c140e"/></linearGradient>
+          <linearGradient id="h2o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fe2f3"/><stop offset="1" stop-color="#1d7fc0"/></linearGradient>
+          <clipPath id="holeClip"><rect id="holeRect" x="220" y="190" width="356" height="0"/></clipPath>
+          <clipPath id="waterClip"><rect id="waterRect" x="200" y="301" width="400" height="0"/></clipPath>
+        </defs>
+        <rect x="0" y="198" width="800" height="222" fill="url(#soil)"/>
+        <path d="M0 260 C140 252 260 270 400 262 S660 254 800 264M0 330 C160 322 300 340 460 330 S700 326 800 334" stroke="#000" stroke-opacity=".25" fill="none"/>
+        <rect x="0" y="190" width="800" height="10" rx="3" fill="#3f8a4c"/>
+        <rect x="200" y="186" width="400" height="140" fill="#050a1f" clip-path="url(#holeClip)"/>
+        <path id="pile" d="M620 192 Q668 120 716 192Z" fill="#5c4431" transform="translate(668 192) scale(0) translate(-668 -192)"/>
+        <g id="stakes" stroke="#d9c8a6" stroke-width="3" stroke-linecap="round">
+          <line x1="222" y1="130" x2="222" y2="196"/><line x1="574" y1="130" x2="574" y2="196"/>
+          <line x1="222" y1="142" x2="574" y2="142" stroke-width="1.2" stroke-dasharray="5 5" stroke="#f3f6ff"/>
+          <text x="398" y="132" text-anchor="middle" fill="#f3f6ff" stroke="none" font-size="14" font-family="system-ui" font-weight="600">4,25 m</text>
+        </g>
+        <g id="plan" opacity="0">
+          <path d="M230 200 V301 H566 V200" fill="none" stroke="#46c9e6" stroke-width="2" stroke-dasharray="7 6"/>
+          <line x1="596" y1="200" x2="596" y2="301" stroke="#46c9e6" stroke-width="1.2"/>
+          <text x="606" y="256" fill="#46c9e6" font-size="14" font-family="system-ui" font-weight="600">1,50 m</text>
+        </g>
+        <g id="tech" opacity="0">
+          <path id="pipe" d="M520 304 V316 H690 V262" fill="none" stroke="#a3adc9" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="664" y="222" width="54" height="40" rx="4" fill="#1b2a78" stroke="#4f70ff"/>
+          <circle cx="680" cy="244" r="7" fill="none" stroke="#46c9e6" stroke-width="2"/>
+          <text x="691" y="214" text-anchor="middle" fill="#a3adc9" font-size="11" font-family="system-ui">local technique</text>
+        </g>
+        <g id="shell" opacity="0">
+          <path d="M230 198 V220 H252 V240 H274 V260 H296 V280 H318 V301 H534 V232 H566 V198" fill="none" stroke="#eef3f8" stroke-width="9" stroke-linejoin="round"/>
+          <rect x="212" y="190" width="30" height="7" rx="2" fill="#d9d4cb"/><rect x="554" y="190" width="30" height="7" rx="2" fill="#d9d4cb"/>
+        </g>
+        <g clip-path="url(#waterClip)">
+          <path d="M234 206 V220 H252 V240 H274 V260 H296 V280 H318 V297 H530 V232 H562 V206Z" fill="url(#h2o)"/>
+          <path id="shimmer" d="M250 214 q20 -5 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="band mist" id="mini-piscine">
+  <div class="wrap">
+    <div class="product">
+      <div class="up">
+        <span class="eyebrow">Offre du moment · Mini piscine</span>
+        <h2 class="h-xl" style="margin-top:14px">Tanna.</h2>
+        <p class="lede" style="margin-top:18px">La coque la plus demandée chez Artisan Pisciniste, surtout en gris. Moins de 10&nbsp;m², escalier d'angle, fond plat : une vraie piscine pour les petits jardins, les terrasses et les patios.</p>
+        <p class="price" style="margin-top:22px">9&nbsp;950&nbsp;€ <small>TTC, livrée chez vous</small></p>
+        <div class="product-ctas">
+          <a class="pill pill-ink mag" href="#contact" data-project="Mini piscine">Réserver la vôtre</a>
+          <a class="more" href="https://artisan-pisciniste.fr/les-avantages-des-minipiscines-de-moins-de-10-m-dans-le-morbihan-">Pourquoi moins de 10&nbsp;m²</a>
+        </div>
+      </div>
+      <div>
+        <div class="stage" id="stage">
+          <div class="fallback" id="fallback">
+            <svg viewBox="-20 -20 505 255" role="img" aria-label="Plan de la piscine Tanna : 4,25 m sur 2,35 m"><rect x="-14" y="-14" width="493" height="243" rx="18" fill="#d9d4cb"/><rect x="0" y="0" width="465" height="215" rx="10" fill="#f4f6f7"/><rect x="6" y="6" width="453" height="203" rx="7" fill="#5fcbe2"/><text x="232" y="112" text-anchor="middle" font-size="18" fill="#0b3a48" font-family="system-ui">4,25 × 2,35 m</text></svg>
+          </div>
+          <span class="drag" id="drag">Faites glisser pour tourner autour</span>
+        </div>
+        <div class="swatches" role="group" aria-label="Coloris de la coque">
+          <span class="lab" id="sw-name">Gris</span>
+          <button class="sw" type="button" aria-pressed="true" aria-label="Gris" data-name="Gris" data-shell="#8f989e" data-water="#2b8aa0" style="background:#8f989e"></button>
+          <button class="sw" type="button" aria-pressed="false" aria-label="Blanc" data-name="Blanc" data-shell="#f2f4f5" data-water="#46c9e6" style="background:#f2f4f5"></button>
+          <button class="sw" type="button" aria-pressed="false" aria-label="Sable" data-name="Sable" data-shell="#e2d4b8" data-water="#38bfae" style="background:#e2d4b8"></button>
+          <button class="sw" type="button" aria-pressed="false" aria-label="Bleu" data-name="Bleu" data-shell="#6f97c9" data-water="#2a86d4" style="background:#6f97c9"></button>
+        </div>
+      </div>
+    </div>
+    <div class="specs up">
+      <div><b>4,25 × 2,35 m</b><span>Longueur × largeur, moins de 10&nbsp;m²</span></div>
+      <div><b>1,50 m</b><span>Profondeur, fond plat</span></div>
+      <div><b>Escalier d'angle</b><span>Et petite banquette</span></div>
+      <div><b>Ceinture béton</b><span>Pour une pose stable et durable</span></div>
+      <div><b>Fabriquée en France</b><span>Par France Piscines Composites</span></div>
+      <div><b>Garantie 25 ans</b><span>Sur la coque</span></div>
+    </div>
+    <p class="fine">Bassin de moins de 10&nbsp;m² : pas de déclaration préalable de travaux, hors secteurs protégés (abords de monument historique, site classé). Renseignez-vous auprès de votre mairie. Offre valable dans la limite des stocks disponibles. Modèle 3D indicatif.</p>
+    <figure class="tanna-photo up"><img src="{{tanna}}" alt="Piscine coque Tanna en coloris gris, posée dans une pelouse"><figcaption>La Tanna en coloris gris</figcaption></figure>
+  </div>
+</section>
+
+<section class="gal" id="gal">
+  <div class="pin">
+    <div class="wrap"><span class="eyebrow">En images</span><h2 class="h-l" style="margin-top:12px">L'été commence au fond du jardin.</h2></div>
+    <div class="track" id="track">
+      <figure class="shot"><img src="{{hero}}" alt="Piscine en forme libre devant une maison au toit d'ardoise"><figcaption><b>Forme libre</b>Plages en dalles claires, au milieu du jardin</figcaption></figure>
+      <figure class="shot"><img src="{{mini}}" alt="Mini piscine coque posée dans une pelouse"><figcaption><b>Mini piscine</b>Moins de 10 m², sans formalités</figcaption></figure>
+      <figure class="shot"><img src="{{stone}}" alt="Petite piscine coque avec banquette et muret en pierre"><figcaption><b>Coque avec banquette</b>Pour les espaces compacts</figcaption></figure>
+      <figure class="shot"><img src="{{rect}}" alt="Piscine coque rectangulaire en jardin de ville"><figcaption><b>Coque rectangulaire</b>Jardin de ville, posée en quelques jours</figcaption></figure>
+      <div class="shot cta"><div><h3>Et chez vous ?</h3><a class="pill pill-glass" href="#contact">Parlons de votre projet</a></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band deep" id="realite-augmentee">
+  <div class="wrap ar">
+    <div class="up">
+      <span class="eyebrow">Réalité augmentée</span>
+      <h2 class="h-l" style="margin-top:14px">Voyez-la chez vous. Avant le premier coup de pelle.</h2>
+      <p class="lede">Scannez le code avec votre téléphone : la piscine apparaît à l'échelle réelle, posée dans votre jardin. Tournez autour, changez de modèle, comparez.</p>
+      <div style="margin-top:32px"><a class="pill pill-brand mag" href="https://piscine-ar.vercel.app/">Lancer l'expérience</a></div>
+    </div>
+    <div class="qr" id="qr"><img src="{{qr}}" alt="QR code vers l'expérience de réalité augmentée"><p>Visez avec l'appareil photo</p></div>
+  </div>
+</section>
+
+<section class="band" id="avis">
+  <div class="wrap">
+    <span class="eyebrow" style="display:block;text-align:center;margin-bottom:22px">Avis clients</span>
+    <p class="reveal-quote" id="rq">« À la fois commercial, technicien, maître d'œuvre et homme de terrain, il a pris en charge notre projet de A à Z, avec l'avantage précieux de n'avoir qu'un seul et unique interlocuteur. »</p>
+    <p class="qmeta">Kris Zoé, avis Google</p>
+    <div class="gbar">
+      <span class="g"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8a10 10 0 0 1-4.4 6.6v5.5h7.1C42.6 36.8 45 31.1 45 24.5z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9H4.5v5.7A22 22 0 0 0 24 46z"/><path fill="#FBBC05" d="M11.8 28.2a13 13 0 0 1 0-8.4v-5.7H4.5a22 22 0 0 0 0 19.8z"/><path fill="#EA4335" d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3A22 22 0 0 0 4.5 14.1l7.3 5.7c1.7-5.2 6.5-9 12.2-9z"/></svg>Avis Google</span>
+      <span>Reproduits sans modification</span>
+      <a class="more" href="https://www.google.com/search?q=artisan+pisciniste+elven">Voir tous les avis sur Google</a>
+    </div>
+  </div>
+  <div class="marquee" id="marquee" aria-label="Avis clients publiés sur Google"></div>
+  <p class="disclose wrap">Sélection d'avis publiés sur la fiche Google d'Artisan Pisciniste. Les textes longs sont abrégés, les coupures sont signalées par […]. L'ensemble des avis, positifs comme négatifs, est consultable sur Google.</p>
+</section>
+
+<section class="band mist">
+  <div class="wrap about">
+    <figure class="portrait-photo up"><img src="{{olivier}}" alt="Olivier Rousseau, artisan pisciniste, devant un local technique de piscine : filtre à sable, pompe et régulation"><figcaption>Olivier Rousseau sur un chantier de local technique</figcaption></figure>
+    <div class="up">
+      <span class="eyebrow">L'artisan</span>
+      <blockquote style="margin-top:16px">« La piscine est bien plus qu'un simple bassin d'eau. C'est un lieu de vie, un espace où se créent des souvenirs. »</blockquote>
+      <p class="body">Grande piscine pour nager, mini piscine pour un petit jardin ou bassin à débordement : chaque projet part des envies et des contraintes de son propriétaire. Olivier suit lui-même chaque chantier, du premier rendez-vous à la remise en route.</p>
+      <p class="sig">Olivier Rousseau<span>Artisan pisciniste, Elven</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="journal">
+  <div class="wrap">
+    <div class="head up"><span class="eyebrow">Conseils</span><h2 class="h-l">Le journal du pisciniste.</h2></div>
+    <div class="journal">
+      <a href="https://artisan-pisciniste.fr/la-revolution-des-piscines-coques-polyester-dans-le-morbihan"><span class="tag">Construction</span><h3>Les piscines coques polyester dans le Morbihan</h3><span class="more" style="color:var(--link)">Lire</span></a>
+      <a href="https://artisan-pisciniste.fr/hivernage-et-estivage-de-piscines-dans-le-morbihan-limportance-dun-entretien-regulier"><span class="tag">Entretien</span><h3>Hivernage et remise en route : l'importance d'un entretien régulier</h3><span class="more" style="color:var(--link)">Lire</span></a>
+      <a href="https://artisan-pisciniste.fr/solutions-techniques-pour-le-chauffage-de-piscine-un-guide-detaille"><span class="tag">Équipement</span><h3>Chauffer sa piscine : pompe à chaleur, solaire ou réchauffeur électrique</h3><span class="more" style="color:var(--link)">Lire</span></a>
+      <a href="https://artisan-pisciniste.fr/limportance-cruciale-de-lentretien-de-la-filtration-pour-les-piscines-privees"><span class="tag">Entretien</span><h3>Pourquoi la filtration décide de la qualité de votre eau</h3><span class="more" style="color:var(--link)">Lire</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="band mist" id="contact">
+  <div class="wrap contact">
+    <div>
+      <span class="eyebrow">Contact</span>
+      <h2 class="h-l" style="margin-top:14px">Parlons de votre piscine.</h2>
+      <p class="lede" style="margin-top:18px">Décrivez votre projet en quelques lignes. C'est Olivier qui vous rappelle, et c'est lui qui suivra votre chantier jusqu'au bout.</p>
+      <dl class="coord">
+        <div><dt>Téléphone</dt><dd><span id="tel">06 52 08 92 19</span><button class="copy" type="button" data-copy="tel">Copier</button></dd></div>
+        <div><dt>Atelier</dt><dd>28 rue des Écoles, 56250 Elven</dd></div>
+        <div><dt>Zone d'intervention</dt><dd>Morbihan (56)</dd></div>
+      </dl>
+    </div>
+    <form id="devis" novalidate>
+      <fieldset class="full" style="border:0;padding:0;margin:0 0 6px">
+        <legend style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Votre projet</legend>
+        <div class="chips">
+          <input type="radio" name="type" id="t1" value="Piscine neuve" checked><label for="t1">Piscine neuve</label>
+          <input type="radio" name="type" id="t2" value="Mini piscine"><label for="t2">Mini piscine</label>
+          <input type="radio" name="type" id="t3" value="Changement de liner"><label for="t3">Changement de liner</label>
+          <input type="radio" name="type" id="t4" value="Pompe et filtration"><label for="t4">Pompe et filtration</label>
+        </div>
+      </fieldset>
+      <label for="f-nom"><span>Nom et prénom <abbr class="req" title="obligatoire">*</abbr></span><input id="f-nom" name="nom" autocomplete="name" required aria-describedby="e-nom"><small class="err" id="e-nom"></small></label>
+      <label for="f-tel"><span>Téléphone <abbr class="req" title="obligatoire">*</abbr></span><input id="f-tel" name="tel" type="tel" autocomplete="tel" inputmode="tel" required aria-describedby="e-tel"><small class="err" id="e-tel"></small></label>
+      <label class="full" for="f-mail"><span>E-mail <abbr class="req" title="obligatoire">*</abbr></span><input id="f-mail" name="email" type="email" autocomplete="email" required aria-describedby="e-email"><small class="err" id="e-email"></small></label>
+      <label class="full" for="f-com"><span>Commune du chantier <abbr class="req" title="obligatoire">*</abbr></span><input id="f-com" name="commune" autocomplete="address-level2" placeholder="ex. Vannes, Ploërmel, Questembert" required aria-describedby="e-commune"><small class="err" id="e-commune"></small></label>
+      <label class="full" for="f-msg"><span>Votre message <abbr class="req" title="obligatoire">*</abbr></span><textarea id="f-msg" name="message" placeholder="Dimensions souhaitées, accès au terrain, délai…" required aria-describedby="e-message"></textarea><small class="err" id="e-message"></small></label>
+      <p class="full reqnote"><abbr class="req" title="obligatoire">*</abbr> Tous les champs sont obligatoires.</p>
+      <button class="pill pill-brand" type="submit">Envoyer ma demande</button>
+      <p class="sent" id="sent" hidden></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="fb"><img src="{{logo}}" alt="">ORPES · Olivier Rousseau · 28 rue des Écoles, 56250 Elven · SIREN 440 790 657</span>
+    <span><a href="https://artisan-pisciniste.fr/terms-and-conditions">Mentions légales</a> · Maquette de refonte, novembre 2026</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+document.documentElement.classList.add('js');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const ease=t=>1-Math.pow(1-t,3);
+
+/* ===== Reviews (verbatim from Google) ===== */
+const REVIEWS=[
+ {n:"Kris Zoé",m:"Local Guide",c:"#7b6cf6",s:"Construction de piscine",t:"Après avoir étudié plusieurs devis, notre choix s'est naturellement porté sur Monsieur Rousseau, et nous en sommes ravis ! À la fois commercial, technicien, maître d'œuvre et homme de terrain, il a pris en charge notre projet de A à Z, avec l'avantage précieux de n'avoir qu'un seul et unique interlocuteur tout au long de la réalisation. […]"},
+ {n:"Fatal Family",m:"8 avis",c:"#e0457b",s:"Pompe : réparation et installation",t:"Très satisfaits de notre pisciniste ! Un seul interlocuteur du début à la fin, toujours disponible et réactif. Les délais annoncés ont été parfaitement respectés et le travail est soigné. Nous recommandons sans hésitation !"},
+ {n:"Le Goic",m:"3 avis",c:"#2f7d5b",s:"Pose de coque",t:"Merci à Olivier pour son bon travail, il m'a installé une coque et le résultat est magnifique. Travail rapide et soigné."},
+ {n:"Sylvie Lamande-Hamel",m:"Local Guide",c:"#8a5a44",s:"Changement de liner",t:"Monsieur Rousseau vient de changer le liner de notre piscine. Il s'est occupé de tout de A à Z, de la vidange au redémarrage en passant par le remplissage. Il a été de précieux conseils sur plein d'autres points concernant l'entretien de notre piscine. Nous ferons désormais appel à lui sans hésiter."},
+ {n:"Jean-Marc Kesler",m:"3 avis",c:"#5b6b7c",s:"Réparation de liner",t:"Mr Rousseau a affectue le changement du liner de ma piscine. Je suis très satisfait de sa prestation, sérieux, travail bien fait et planning respecté. Je recommande."},
+ {n:"Michel Ruiz",m:"Local Guide",c:"#3b5cf0",s:"Construction de piscine",t:"J'ai fait appel à Monsieur Rousseau pour la construction de ma piscine il y a plus de 9 ans. Elle est toujours impeccable, et reste à ce jour l'une des plus belles réalisations de ma maison. Artisan méticuleux, rigoureux et exigeant, Monsieur Rousseau a livré un travail de très grande qualité. […]"},
+ {n:"Ophélie Thomer",m:"9 avis",c:"#2a9d8f",s:"Installation de coque",t:"J ai contacté monsieur Rousseau pour l installation de ma piscine coque,nous sommes ravis,merci à lui pour son professionnalisme,vous pouvez lui faire confiance les yeux fermés."},
+ {n:"Jim",m:"1 avis",c:"#3d8b5a",s:"Conseil et équipement",t:"Artisan très compétant du point de vue technique des équipements proposés\nÀ l'écoute de vos besoins, il saura vous aiguiller sur la meilleure solution qu'il pourrait vous offrir\nMr Rousseau s'occupe de votre projet de A à Z"},
+ {n:"Anne Sophie Doublet",m:"Avis Google",c:"#8d4b2f",s:"Avis Google",t:"Un professionnel sérieux et appliqué dans son travail .\nDe très bon conseil, nous sommes très satisfait de son travail et referont appel à lui sans hésiter. Merci"}
+];
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const card=(r,hidden)=>`<article class="rv"${hidden?' aria-hidden="true"':''}><header><span class="av" style="background:${r.c}">${esc(r.n[0])}</span><span class="who"><b>${esc(r.n)}</b><span>${esc(r.m)}</span></span></header><span class="stars" aria-label="5 étoiles sur 5">★★★★★</span><p>${esc(r.t).replace(/\n/g,'<br>')}</p><span class="svc">${esc(r.s)}</span></article>`;
+const mq=document.getElementById('marquee');
+const rows=[REVIEWS.slice(0,5),REVIEWS.slice(5)];
+mq.innerHTML=rows.map((rw,i)=>`<div class="row${i?' rev':''}" style="--dur:${i?62:74}s">${rw.map(r=>card(r)).join('')}${reduce?'':rw.map(r=>card(r,true)).join('')}</div>`).join('');
+
+/* ===== Hero: interactive water ripples over the photo ===== */
+const hero=document.getElementById('top'), cv=document.getElementById('water');
+const isTouch=matchMedia('(hover: none)').matches;
+document.querySelector('#hint span').textContent=isTouch?"Touchez l'eau":"Passez la main sur l'eau";
+(function water(){
+  const gl=cv.getContext('webgl',{antialias:false,premultipliedAlpha:false});
+  if(!gl){document.getElementById('hint').hidden=true;return;}
+  const img=new Image();
+  img.onload=()=>start(img);
+  img.src=document.querySelector('.hero-img').src;
+  function start(img){
+    const vs='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+    const fs=`precision mediump float;
+    uniform sampler2D photo,hmap;uniform vec2 res,ims,tx;uniform float t;
+    void main(){
+      vec2 uv=gl_FragCoord.xy/res;
+      float ra=res.x/res.y, ia=ims.x/ims.y;
+      vec2 s=ra>ia?vec2(1.,ia/ra):vec2(ra/ia,1.);
+      vec2 puv=(uv-.5)*s+.5; puv.y=1.-puv.y; puv.y=puv.y*.9+.06;
+      float hl=texture2D(hmap,uv-vec2(tx.x,0.)).r, hr=texture2D(hmap,uv+vec2(tx.x,0.)).r;
+      float hd=texture2D(hmap,uv-vec2(0.,tx.y)).r, hu=texture2D(hmap,uv+vec2(0.,tx.y)).r;
+      vec2 n=vec2(hl-hr,hd-hu);
+      vec3 col=texture2D(photo,puv+n*vec2(.09,-.09)).rgb;
+      float sp=clamp(dot(n,vec2(-.55,.85))*7.,0.,1.);
+      col+=vec3(.85,.97,1.)*sp*sp*.55;
+      col-=vec3(.06,.04,0.)*clamp(-dot(n,vec2(-.55,.85))*7.,0.,1.);
+      float sway=sin(uv.y*9.+t*.8)*.0015;
+      gl_FragColor=vec4(col+sway,1.);
+    }`;
+    const sh=(ty,src)=>{const s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);return s;};
+    const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);
+    if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){document.getElementById('hint').hidden=true;return;}
+    gl.useProgram(pr);
+    const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    const loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    const U=n=>gl.getUniformLocation(pr,n);
+    const mkTex=(unit)=>{const t=gl.createTexture();gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t;};
+    mkTex(0);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,img);
+    mkTex(1);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+    gl.uniform1i(U('photo'),0);gl.uniform1i(U('hmap'),1);gl.uniform2f(U('ims'),img.naturalWidth,img.naturalHeight);
+    let W=0,H=0,a,bb,px;
+    const size=()=>{
+      const dpr=Math.min(devicePixelRatio||1,1.5);
+      cv.width=cv.clientWidth*dpr|0;cv.height=cv.clientHeight*dpr|0;gl.viewport(0,0,cv.width,cv.height);
+      gl.uniform2f(U('res'),cv.width,cv.height);
+      W=180;H=Math.max(40,Math.round(W*cv.clientHeight/cv.clientWidth));
+      a=new Float32Array(W*H);bb=new Float32Array(W*H);px=new Uint8Array(W*H);
+      gl.uniform2f(U('tx'),1/W,1/H);
+    };
+    size();addEventListener('resize',size);
+    const drop=(x,y,r,s)=>{ // x,y in 0..1, y from top
+      const cx=x*W|0, cy=(1-y)*H|0;
+      for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){
+        const X=cx+i,Y=cy+j; if(X<1||Y<1||X>=W-1||Y>=H-1)continue;
+        const d=Math.sqrt(i*i+j*j); if(d>r)continue;
+        a[Y*W+X]+=s*(Math.cos(d/r*Math.PI)*.5+.5);
+      }
+    };
+    let last=null;
+    hero.addEventListener('pointermove',e=>{
+      const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+      if(last){const dx=x-last[0],dy=y-last[1];const sp=Math.min(1,Math.hypot(dx,dy)*30);drop(x,y,3,1.4*sp+.25);}else drop(x,y,3,.6);
+      last=[x,y];
+    });
+    hero.addEventListener('pointerleave',()=>last=null);
+    hero.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();drop((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height,6,4);});
+    const step=()=>{
+      for(let y=1;y<H-1;y++){const o=y*W;for(let x=1;x<W-1;x++){const i=o+x;
+        let v=(a[i-1]+a[i+1]+a[i-W]+a[i+W])*.5-bb[i]; v*=.972; bb[i]=v;}}
+      const t=a;a=bb;bb=t;
+      for(let i=0;i<W*H;i++){let v=a[i]*38+128;px[i]=v<0?0:v>255?255:v;}
+      gl.activeTexture(gl.TEXTURE1);gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,W,H,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,px);
+    };
+    let vis=true,raf=0,lastDrop=0;const t0=performance.now();
+    const frame=now=>{
+      if(!reduce&&now-lastDrop>900){drop(Math.random(),.45+Math.random()*.5,2+Math.random()*2|0,.9);lastDrop=now;}
+      step();gl.uniform1f(U('t'),(now-t0)/1000);gl.drawArrays(gl.TRIANGLES,0,3);
+      if(vis)raf=requestAnimationFrame(frame);
+    };
+    if(reduce){step();gl.drawArrays(gl.TRIANGLES,0,3);hero.addEventListener('pointermove',()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);setTimeout(()=>{vis=false},2500);vis=true;});}
+    else{raf=requestAnimationFrame(frame);new IntersectionObserver(([e])=>{vis=e.isIntersecting;cancelAnimationFrame(raf);if(vis)raf=requestAnimationFrame(frame);}).observe(hero);}
+    cv.classList.add('on');
+  }
+})();
+
+/* ===== Mini piscine in 3D ===== */
+(function pool(){
+  const stage=document.getElementById('stage');
+  if(!window.THREE)return;
+  let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch(e){return;}
+  document.getElementById('fallback').hidden=true;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  stage.prepend(renderer.domElement);
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(32,1,.1,100);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x7d8aa8,.95));
+  const sun=new THREE.DirectionalLight(0xffffff,.75);sun.position.set(4,8,5);scene.add(sun);
+  const L=4.25,Wd=2.35,D=1.5,T=.08;
+  const shellMat=new THREE.MeshStandardMaterial({color:0x8f989e,roughness:.32,metalness:0});
+  const copeMat=new THREE.MeshStandardMaterial({color:0xf1ede6,roughness:.85});
+  const g=new THREE.Group();scene.add(g);
+  const box=(w,h,d,x,y,z,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||shellMat);me.position.set(x,y,z);g.add(me);return me;};
+  box(L,T,Wd,0,-D,0);
+  box(L,D,T,0,-D/2,Wd/2);box(L,D,T,0,-D/2,-Wd/2);
+  box(T,D,Wd,L/2,-D/2,0);box(T,D,Wd,-L/2,-D/2,0);
+  /* escalier d'angle : 3 marches triangulaires emboîtées */
+  for(let k=1;k<=3;k++){const leg=.5+.4*k,h=D-.36*k;const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(leg,0);sh.lineTo(0,-leg);sh.lineTo(0,0);
+    const me=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false}),shellMat);me.rotation.x=-Math.PI/2;me.position.set(-L/2+T/2,-D,-Wd/2+T/2);g.add(me);}
+  const deckMat=new THREE.MeshStandardMaterial({color:0xcfc6b6,roughness:.95});
+  const E=1.5,Hh=D+.12;
+  box(L+2*E,Hh,E,0,-Hh/2,Wd/2+E/2,deckMat);box(L+2*E,Hh,E,0,-Hh/2,-Wd/2-E/2,deckMat);
+  box(E,Hh,Wd,L/2+E/2,-Hh/2,0,deckMat);box(E,Hh,Wd,-L/2-E/2,-Hh/2,0,deckMat);
+  const cw=.3,ct=.06;
+  box(L+2*cw,ct,cw,0,ct/2,Wd/2+cw/2,copeMat);box(L+2*cw,ct,cw,0,ct/2,-Wd/2-cw/2,copeMat);
+  box(cw,ct,Wd,L/2+cw/2,ct/2,0,copeMat);box(cw,ct,Wd,-L/2-cw/2,ct/2,0,copeMat);
+  const wg=new THREE.PlaneGeometry(L-T,Wd-T,64,32);
+  const waterMat=new THREE.MeshPhongMaterial({color:0x2b8aa0,transparent:true,opacity:.42,shininess:140,specular:0xffffff});
+  const water=new THREE.Mesh(wg,waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.12;g.add(water);
+  const pos=wg.attributes.position;
+  let theta=-.75,phi=.82,target={theta,phi},auto=!reduce,drag=null;
+  const place=()=>{const r=11.5;cam.position.set(r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi)-.4,r*Math.sin(phi)*Math.sin(theta));cam.lookAt(0,-.55,0);};
+  const resize=()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<1.1?42:32;cam.updateProjectionMatrix();};
+  new ResizeObserver(resize).observe(stage);resize();
+  const cvs=renderer.domElement;
+  cvs.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY,target.theta,target.phi];auto=false;cvs.setPointerCapture(e.pointerId);document.getElementById('drag').hidden=true;});
+  cvs.addEventListener('pointermove',e=>{if(!drag)return;target.theta=drag[2]+(e.clientX-drag[0])*.008;if(e.pointerType!=='touch')target.phi=clamp(drag[3]-(e.clientY-drag[1])*.006,.45,1.25);});
+  cvs.addEventListener('pointerup',()=>drag=null);cvs.addEventListener('pointercancel',()=>drag=null);
+  let vis=false,raf=0;const t0=performance.now();
+  const render=now=>{
+    const t=(now-t0)/1000;
+    if(auto)target.theta+=.0025;
+    theta+=(target.theta-theta)*.08;phi+=(target.phi-phi)*.08;place();
+    if(!reduce){for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);pos.setZ(i,.018*Math.sin(x*3.1+t*1.6)+.012*Math.cos(y*4.3+t*1.2)+.008*Math.sin((x+y)*7+t*2.4));}
+      pos.needsUpdate=true;wg.computeVertexNormals();}
+    renderer.render(scene,cam);
+    if(vis)raf=requestAnimationFrame(render);
+  };
+  place();renderer.render(scene,cam);
+  new IntersectionObserver(([e])=>{vis=e.isIntersecting;cancelAnimationFrame(raf);if(vis)raf=requestAnimationFrame(render);}).observe(stage);
+  document.querySelectorAll('.sw').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sw').forEach(s=>s.setAttribute('aria-pressed',s===btn));
+    shellMat.color.set(btn.dataset.shell);waterMat.color.set(btn.dataset.water);
+    document.getElementById('sw-name').textContent=btn.dataset.name;
+    if(!vis)renderer.render(scene,cam);
+  }));
+})();
+
+/* ===== Scroll-driven scenes ===== */
+const nav=document.getElementById('nav');
+const story=document.getElementById('projet'), steps=[...document.querySelectorAll('#steps li')], prog=document.getElementById('prog');
+const $=id=>document.getElementById(id);
+const gal=$('gal'), track=$('track'), shots=[...track.querySelectorAll('.shot img')];
+const solo=$('interlocuteur'), orbit=$('orbit');
+if(reduce)solo.classList.add('static');
+const rq=$('rq');
+rq.innerHTML=rq.textContent.split(' ').map(w=>`<span class="w">${w}</span>`).join(' ');
+const words=[...rq.querySelectorAll('.w')];
+const narrow=matchMedia('(max-width: 760px)');
+if(reduce)story.classList.add('static');
+const galMode=()=>gal.classList.toggle('static',reduce||narrow.matches);galMode();narrow.addEventListener('change',galMode);
+
+function setStory(p){
+  const k=p*5, sp=i=>clamp(k-i);
+  const active=Math.min(4,Math.floor(k));
+  steps.forEach((li,i)=>li.classList.toggle('on',reduce?true:i===active));
+  prog.style.setProperty('--p',p);
+  $('stakes').style.opacity=1-sp(3)*.85;
+  $('plan').style.opacity=sp(1)*(1-sp(3));
+  const dig=ease(sp(2));
+  $('holeRect').setAttribute('height',124*dig);
+  $('pile').setAttribute('transform',`translate(668 192) scale(${dig}) translate(-668 -192)`);
+  const s3=ease(sp(3));
+  $('shell').style.opacity=s3>0?1:0;
+  $('shell').setAttribute('transform',`translate(0 ${-260*(1-s3)})`);
+  $('tech').style.opacity=clamp(sp(3)*2-1);
+  const w=ease(sp(4)); $('waterRect').setAttribute('y',301-95*w);$('waterRect').setAttribute('height',95*w+2);
+}
+if(reduce)setStory(1);
+
+let ticking=false;
+function onScroll(){
+  ticking=false;
+  const vh=innerHeight;
+  nav.classList.toggle('solid',scrollY>hero.offsetHeight-80);
+  if(!reduce){
+    const r=story.getBoundingClientRect();
+    setStory(clamp(-r.top/(r.height-vh)));
+  }
+  if(!reduce){
+    const r=solo.getBoundingClientRect();
+    const o=orbit.getBoundingClientRect(),c=o.top+o.height/2;
+    const p=solo.offsetHeight>vh*1.2?clamp(-r.top/(r.height-vh)*1.15):clamp((vh*.9-c)/(vh*.65));
+    orbit.style.setProperty('--k',(1-ease(p)).toFixed(3));
+  }
+  if(!gal.classList.contains('static')){
+    const r=gal.getBoundingClientRect(), p=clamp(-r.top/(r.height-vh));
+    const max=track.scrollWidth-innerWidth;
+    track.style.transform=`translateX(${-max*p}px)`;
+    shots.forEach((im,i)=>im.style.setProperty('--sx',(p*(shots.length)-i).toFixed(3)));
+  }
+  if(!reduce){
+    const r=rq.getBoundingClientRect(), p=clamp((vh*.85-r.top)/(vh*.6));
+    words.forEach((w,i)=>w.style.setProperty('--o',(.18+.82*clamp(p*words.length*1.1-i)).toFixed(2)));
+  }
+}
+addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(onScroll);}},{passive:true});
+addEventListener('resize',onScroll);onScroll();
+
+/* ===== Section entrances, counters ===== */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{rootMargin:'0px 0px -8% 0px'});
+document.querySelectorAll('.up').forEach(el=>io.observe(el));
+if(!reduce){
+  const cio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;cio.unobserve(e.target);
+    const el=e.target,to=+el.dataset.count,t0=performance.now();
+    const f=now=>{const p=clamp((now-t0)/1400);el.textContent=Math.round(to*ease(p));if(p<1)requestAnimationFrame(f);};requestAnimationFrame(f);}),{threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
+}
+
+/* ===== Pointer effects: tile spotlight, magnetic buttons, tilting QR ===== */
+document.querySelectorAll('.tile').forEach(t=>t.addEventListener('pointermove',e=>{const r=t.getBoundingClientRect();t.style.setProperty('--mx',e.clientX-r.left+'px');t.style.setProperty('--my',e.clientY-r.top+'px');}));
+if(!reduce&&!isTouch){
+  document.querySelectorAll('.mag').forEach(b=>{
+    b.addEventListener('pointermove',e=>{const r=b.getBoundingClientRect();b.style.transform=`translate(${(e.clientX-r.left-r.width/2)*.18}px,${(e.clientY-r.top-r.height/2)*.3}px)`;});
+    b.addEventListener('pointerleave',()=>b.style.transform='');
+  });
+  const qr=$('qr'),ar=$('realite-augmentee');
+  ar.addEventListener('pointermove',e=>{const r=qr.getBoundingClientRect();qr.style.setProperty('--ry',((e.clientX-r.left-r.width/2)/r.width*16).toFixed(1)+'deg');qr.style.setProperty('--rx',(-(e.clientY-r.top-r.height/2)/r.height*16).toFixed(1)+'deg');});
+  ar.addEventListener('pointerleave',()=>{qr.style.setProperty('--ry','0deg');qr.style.setProperty('--rx','0deg');});
+}
+
+/* ===== Form & copy ===== */
+document.querySelectorAll('[data-project]').forEach(a=>a.addEventListener('click',()=>{const r=[...document.querySelectorAll('input[name=type]')].find(i=>i.value===a.dataset.project);if(r)r.checked=true;}));
+document.querySelectorAll('.copy').forEach(btn=>btn.addEventListener('click',()=>{
+  const el=$(btn.dataset.copy);const done=()=>{btn.textContent='Copié';setTimeout(()=>btn.textContent='Copier',1600);};
+  try{navigator.clipboard.writeText(el.textContent).then(done,()=>getSelection().selectAllChildren(el));}catch(e){getSelection().selectAllChildren(el);}
+}));
+$('devis').addEventListener('submit',e=>{
+  e.preventDefault();const f=e.target,out=$('sent');out.hidden=false;
+  if(!f.nom.value.trim()||!f.email.value.includes('@')){out.textContent="Indiquez votre nom et une adresse e-mail valide pour qu'Olivier puisse vous répondre.";return;}
+  out.textContent='Maquette : sur le site final, votre demande « '+f.type.value+' » partira directement chez Olivier. Rien n\'a été envoyé ici.';
+});
+})();
+</script>

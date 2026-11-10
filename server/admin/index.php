@@ -1,0 +1,472 @@
+<?php
+/* Mini CRM — Artisan Pisciniste
+ * /admin/            liste des demandes + compteurs
+ * /admin/?id=12      fiche d'une demande
+ * /admin/?new=1      ajouter une demande à la main
+ * /admin/?export=1   export CSV (Excel)
+ * Mot de passe oublié : voir le README du dépôt. */
+declare(strict_types=1);
+require dirname(__DIR__) . '/crm-db.php';
+require dirname(__DIR__) . '/mail-template.php';
+$CFG = is_file(dirname(__DIR__) . '/contact-config.php') ? require dirname(__DIR__) . '/contact-config.php' : [];
+const OLIVIER = 'olivier@artisan-pisciniste.fr';
+
+date_default_timezone_set('Europe/Paris');
+header('X-Robots-Tag: noindex, nofollow');
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header('Cache-Control: no-store');
+
+$https = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off';
+session_name('ap_crm');
+session_set_cookie_params(['lifetime' => 0, 'path' => '/admin/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Strict']);
+session_start();
+
+function h(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES | ENT_HTML5, 'UTF-8'); }
+function csrf(): string { return $_SESSION['csrf'] ??= bin2hex(random_bytes(16)); }
+function check_csrf(): void {
+    if (!hash_equals($_SESSION['csrf'] ?? '', (string)($_POST['csrf'] ?? ''))) { http_response_code(400); exit('Session expirée. Rechargez la page.'); }
+}
+function go(string $q = ''): never { header('Location: ./' . $q, true, 303); exit; }
+function flash(?string $m = null): ?string {
+    if ($m !== null) { $_SESSION['flash'] = $m; return null; }
+    $f = $_SESSION['flash'] ?? null; unset($_SESSION['flash']); return $f;
+}
+function fr_date(?string $dt, bool $time = true): string {
+    if (!$dt) return '';
+    $d = new DateTimeImmutable($dt);
+    $m = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    return $d->format('j') . ' ' . $m[(int)$d->format('n') - 1] . ' ' . $d->format('Y') . ($time ? ' · ' . $d->format('H\hi') : '');
+}
+function euros(?float $v): string { return $v === null ? '' : number_format($v, 0, ',', "\u{202F}") . "\u{202F}€"; }
+function tel_href(string $t): string {
+    $t = preg_replace('/[^\d+]/', '', $t) ?? '';
+    return str_starts_with($t, '0') ? '+33' . substr($t, 1) : $t;
+}
+
+try { $db = crm_db(); } catch (Throwable $e) {
+    http_response_code(500);
+    exit('Base de données indisponible : ' . h($e->getMessage()) . '. Vérifiez que l\'extension PHP pdo_sqlite est activée (hPanel › Avancé › Configuration PHP).');
+}
+
+/* ---------- authentification ---------- */
+$hash = crm_setting('password_hash');
+// Mot de passe oublié : créer un fichier vide « reinitialiser-mot-de-passe » dans le dossier crm-data (Gestionnaire de fichiers)
+$resetFile = crm_dir() . '/reinitialiser-mot-de-passe';
+if (is_file($resetFile)) $hash = null;
+$ip = $_SERVER['REMOTE_ADDR'] ?? '';
+$error = null;
+
+if (isset($_GET['logout'])) { $_SESSION = []; session_destroy(); go(); }
+
+if (!$hash && ($_POST['action'] ?? '') === 'setup') {
+    check_csrf();
+    $p1 = (string)($_POST['p1'] ?? ''); $p2 = (string)($_POST['p2'] ?? '');
+    if (mb_strlen($p1) < 10) $error = 'Choisissez un mot de passe d\'au moins 10 caractères.';
+    elseif ($p1 !== $p2) $error = 'Les deux mots de passe ne sont pas identiques.';
+    else {
+        crm_setting('password_hash', password_hash($p1, PASSWORD_DEFAULT)); @unlink($resetFile);
+        session_regenerate_id(true); $_SESSION['ok'] = true; flash('Mot de passe créé. Bienvenue dans le CRM.'); go();
+    }
+}
+if ($hash && ($_POST['action'] ?? '') === 'login') {
+    check_csrf();
+    $db->prepare('DELETE FROM tentatives WHERE at < ?')->execute([time() - 900]);
+    $n = $db->prepare('SELECT COUNT(*) FROM tentatives WHERE ip = ?'); $n->execute([$ip]);
+    if ((int)$n->fetchColumn() >= 5) $error = 'Trop d\'essais. Réessayez dans 15 minutes.';
+    elseif (password_verify((string)($_POST['p'] ?? ''), $hash)) {
+        $db->prepare('DELETE FROM tentatives WHERE ip = ?')->execute([$ip]);
+        session_regenerate_id(true); $_SESSION['ok'] = true; go();
+    } else {
+        $db->prepare('INSERT INTO tentatives (ip, at) VALUES (?, ?)')->execute([$ip, time()]);
+        usleep(400000);
+        $error = 'Mot de passe incorrect.';
+    }
+}
+
+if (empty($_SESSION['ok'])) { page_auth(!$hash, $error); exit; }
+// Navigateur de l'admin : ses visites sur le site ne sont pas comptées dans le trafic
+if (empty($_COOKIE['ap_staff'])) setcookie('ap_staff', '1', ['expires' => time() + 31536000, 'path' => '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
+
+/* ---------- actions ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_csrf();
+    $a = (string)($_POST['action'] ?? '');
+    $id = (int)($_POST['id'] ?? 0);
+    $f = fn(string $k, int $max = 300) => trim(mb_substr(str_replace("\0", '', (string)($_POST[$k] ?? '')), 0, $max));
+
+    if ($a === 'create') {
+        if ($f('nom') === '') { flash('Le nom est obligatoire.'); go('?new=1'); }
+        $id = crm_add(['nom' => $f('nom', 120), 'tel' => $f('tel', 40), 'email' => $f('email', 160), 'commune' => $f('commune', 120),
+                       'type' => $f('type', 60), 'message' => $f('message', 5000)], 'manuel');
+        flash('Demande ajoutée.'); go('?id=' . $id);
+    }
+    $d = $id ? crm_get($id) : null;
+    if (!$d) go();
+
+    if ($a === 'save') {
+        $statut = array_key_exists($_POST['statut'] ?? '', CRM_STATUTS) ? $_POST['statut'] : $d['statut'];
+        $mt = str_replace([' ', "\u{202F}", "\u{00A0}", '€'], '', $f('montant', 20)); $mt = str_replace(',', '.', $mt);
+        $montant = $mt === '' ? null : (is_numeric($mt) ? (float)$mt : $d['montant']);
+        $relance = preg_match('/^\d{4}-\d{2}-\d{2}$/', $f('relance', 10)) ? $f('relance', 10) : null;
+        crm_db()->prepare('UPDATE demandes SET nom=?, tel=?, email=?, commune=?, type=?, message=?, statut=?, montant=?, relance=?, updated_at=? WHERE id=?')
+            ->execute([$f('nom', 120), $f('tel', 40), $f('email', 160), $f('commune', 120), $f('type', 60), $f('message', 5000), $statut, $montant, $relance, crm_now(), $id]);
+        if ($statut !== $d['statut']) crm_note($id, 'Statut : ' . CRM_STATUTS[$d['statut']] . ' → ' . CRM_STATUTS[$statut], true);
+        if ($montant !== null && (float)$montant !== (float)($d['montant'] ?? -1)) crm_note($id, 'Montant du devis : ' . euros($montant), true);
+        if ($f('note', 4000) !== '') crm_note($id, $f('note', 4000));
+        flash('Enregistré.'); go('?id=' . $id);
+    }
+    if ($a === 'reply') {
+        global $CFG;
+        $from = $CFG['from'] ?? OLIVIER;
+        $sujet = $f('sujet', 200); $corps = trim(str_replace("\0", '', (string)($_POST['corps'] ?? '')));
+        $_SESSION['draft'][$id] = ['sujet' => $sujet, 'corps' => $corps];
+        if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)) { flash("L'adresse e-mail du client n'est pas valide : corrigez-la dans la fiche."); go('?id=' . $id . '#repondre'); }
+        if ($sujet === '' || mb_strlen($corps) < 5) { flash("Indiquez un objet et un message."); go('?id=' . $id . '#repondre'); }
+        $pj = null;
+        if (!empty($_FILES['pj']['name']) && ($_FILES['pj']['error'] ?? 1) === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo((string)$_FILES['pj']['name'], PATHINFO_EXTENSION));
+            $types = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
+            if (!isset($types[$ext]) || $_FILES['pj']['size'] > 8 * 1024 * 1024) { flash('Pièce jointe refusée : PDF, JPG ou PNG de 8 Mo maximum.'); go('?id=' . $id . '#repondre'); }
+            $pj = ['name' => (string)$_FILES['pj']['name'], 'type' => $types[$ext], 'data' => (string)file_get_contents($_FILES['pj']['tmp_name'])];
+        } elseif (!empty($_FILES['pj']['name'])) { flash("La pièce jointe n'a pas pu être lue (trop lourde ?)."); go('?id=' . $id . '#repondre'); }
+        $mail = ap_reply_email($corps);
+        $copie = !empty($_POST['copie']) ? $from : '';
+        $ok = ap_send($d['email'], $sujet, $mail['html'], $mail['text'], $from, 'Olivier Rousseau · Artisan Pisciniste', $from, $copie, $pj, ['X-AP-Reference' => $d['ref']]);
+        if (!$ok) { flash("L'e-mail n'a pas pu partir. Réessayez dans un instant, ou écrivez depuis votre messagerie."); go('?id=' . $id . '#repondre'); }
+        unset($_SESSION['draft'][$id]);
+        crm_note($id, "✉ E-mail envoyé à {$d['email']} — « $sujet »" . ($pj ? " (pièce jointe : {$pj['name']})" : '') . "\n\n" . $corps);
+        if ($d['statut'] === 'nouvelle') {
+            crm_db()->prepare('UPDATE demandes SET statut=?, updated_at=? WHERE id=?')->execute(['en_cours', crm_now(), $id]);
+            crm_note($id, 'Statut : Nouvelle → En cours', true);
+        } else crm_db()->prepare('UPDATE demandes SET updated_at=? WHERE id=?')->execute([crm_now(), $id]);
+        flash('E-mail envoyé à ' . $d['email'] . ($copie ? ' (copie dans votre boîte).' : '.'));
+        go('?id=' . $id . '#notes');
+    }
+    if ($a === 'note' && $f('note', 4000) !== '') {
+        crm_note($id, $f('note', 4000));
+        crm_db()->prepare('UPDATE demandes SET updated_at=? WHERE id=?')->execute([crm_now(), $id]);
+        go('?id=' . $id . '#notes');
+    }
+    if ($a === 'delete' && ($_POST['confirm'] ?? '') === 'oui') {
+        crm_db()->prepare('DELETE FROM notes WHERE demande_id=?')->execute([$id]);
+        crm_db()->prepare('DELETE FROM demandes WHERE id=?')->execute([$id]);
+        flash('Demande supprimée définitivement.'); go();
+    }
+    go('?id=' . $id);
+}
+
+/* ---------- export CSV ---------- */
+if (isset($_GET['export'])) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="demandes-devis-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['Référence', 'Reçue le', 'Source', 'Client', 'Téléphone', 'E-mail', 'Commune', 'Projet', 'Statut', 'Montant devis (€)', 'Relance', 'Message'], ';');
+    foreach ($db->query('SELECT * FROM demandes ORDER BY created_at DESC') as $r)
+        fputcsv($out, [$r['ref'], $r['created_at'], $r['source'], $r['nom'], $r['tel'], $r['email'], $r['commune'], $r['type'],
+                       CRM_STATUTS[$r['statut']] ?? $r['statut'], $r['montant'] === null ? '' : str_replace('.', ',', (string)$r['montant']), $r['relance'], $r['message']], ';');
+    exit;
+}
+
+/* ---------- pages ---------- */
+if (isset($_GET['stats'])) { page_stats(); exit; }
+if (isset($_GET['new'])) { page_form(null); exit; }
+if (isset($_GET['id'])) { $d = crm_get((int)$_GET['id']); $d ? page_form($d) : go(); exit; }
+page_list();
+
+/* ================================================================== */
+
+function layout(string $title, string $body): void { ?>
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title><?= h($title) ?> · CRM Artisan Pisciniste</title>
+<link rel="icon" href="/assets/img/favicon-48.png"><link rel="stylesheet" href="admin.css?v=1"></head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="./"><img src="/assets/img/logo.png" alt="" width="30" height="30"><span>CRM <b>Artisan Pisciniste</b></span></a>
+  <?php if (!empty($_SESSION['ok'])): ?><nav><a href="./" class="tab<?= isset($_GET['stats']) ? '' : ' on' ?>">Demandes</a><a href="./?stats=1" class="tab<?= isset($_GET['stats']) ? ' on' : '' ?>">Trafic</a><a href="./?new=1" class="btn btn-brand" aria-label="Nouvelle demande">+<span class="lbl"> Nouvelle</span></a><a href="./?logout=1" class="link">Déconnexion</a></nav><?php endif; ?>
+</div></header>
+<main class="wrap"><?php if ($m = flash()): ?><p class="flash"><?= h($m) ?></p><?php endif; ?><?= $body ?></main>
+</body></html>
+<?php }
+
+function page_auth(bool $setup, ?string $error): void {
+    ob_start(); ?>
+    <section class="auth card">
+      <img src="/assets/img/logo.png" alt="" width="64" height="64">
+      <?php if ($setup): ?>
+        <h1>Créer le mot de passe du CRM</h1>
+        <p class="muted">Première connexion : choisissez le mot de passe qui protégera les demandes de devis. Au moins 10 caractères.</p>
+        <form method="post"><input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="setup">
+          <label>Mot de passe<input type="password" name="p1" autocomplete="new-password" required minlength="10" autofocus></label>
+          <label>Confirmer le mot de passe<input type="password" name="p2" autocomplete="new-password" required minlength="10"></label>
+          <?php if ($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
+          <button class="btn btn-brand">Créer et entrer</button></form>
+      <?php else: ?>
+        <h1>CRM Artisan Pisciniste</h1>
+        <p class="muted">Espace réservé. Entrez le mot de passe.</p>
+        <form method="post"><input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="login">
+          <label>Mot de passe<input type="password" name="p" autocomplete="current-password" required autofocus></label>
+          <?php if ($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
+          <button class="btn btn-brand">Se connecter</button></form>
+      <?php endif; ?>
+    </section>
+    <?php layout('Connexion', (string)ob_get_clean());
+}
+
+function badge(string $s): string { return '<span class="badge s-' . h($s) . '">' . h(CRM_STATUTS[$s] ?? $s) . '</span>'; }
+
+function page_list(): void {
+    $db = crm_db();
+    $all = $db->query('SELECT statut, COUNT(*) n, COALESCE(SUM(montant),0) m FROM demandes GROUP BY statut')->fetchAll();
+    $c = array_fill_keys(array_keys(CRM_STATUTS), 0); $ca = 0.0; $total = 0;
+    foreach ($all as $r) { $c[$r['statut']] = (int)$r['n']; $total += (int)$r['n']; if ($r['statut'] === 'gagnee') $ca = (float)$r['m']; }
+    $mois = (int)$db->query("SELECT COUNT(*) FROM demandes WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime')")->fetchColumn();
+    $closed = $c['gagnee'] + $c['perdue'];
+    $taux = $closed ? round($c['gagnee'] / $closed * 100) : null;
+    $relances = (int)$db->query("SELECT COUNT(*) FROM demandes WHERE relance IS NOT NULL AND relance <= date('now','localtime') AND statut NOT IN ('gagnee','perdue')")->fetchColumn();
+
+    $filtre = array_key_exists($_GET['statut'] ?? '', CRM_STATUTS) ? $_GET['statut'] : (($_GET['statut'] ?? '') === 'relance' ? 'relance' : '');
+    $q = trim((string)($_GET['q'] ?? ''));
+    $sql = 'SELECT * FROM demandes WHERE 1'; $args = [];
+    if ($filtre === 'relance') $sql .= " AND relance IS NOT NULL AND relance <= date('now','localtime') AND statut NOT IN ('gagnee','perdue')";
+    elseif ($filtre !== '') { $sql .= ' AND statut = ?'; $args[] = $filtre; }
+    if ($q !== '') { $sql .= ' AND (nom LIKE ? OR commune LIKE ? OR email LIKE ? OR tel LIKE ? OR ref LIKE ? OR message LIKE ?)'; array_push($args, ...array_fill(0, 6, '%' . $q . '%')); }
+    $sql .= ' ORDER BY created_at DESC LIMIT 500';
+    $st = $db->prepare($sql); $st->execute($args); $rows = $st->fetchAll();
+    $qs = fn(array $p) => './?' . http_build_query(array_filter($p + ['q' => $q], fn($v) => $v !== ''));
+
+    ob_start(); ?>
+    <section class="kpis">
+      <div class="kpi"><span>Demandes reçues</span><b><?= $total ?></b><small><?= $mois ?> ce mois-ci</small></div>
+      <a class="kpi <?= $c['nouvelle'] ? 'hot' : '' ?>" href="<?= h($qs(['statut' => 'nouvelle'])) ?>"><span>À traiter</span><b><?= $c['nouvelle'] ?></b><small>nouvelles demandes</small></a>
+      <a class="kpi" href="<?= h($qs(['statut' => 'devis'])) ?>"><span>En cours</span><b><?= $c['en_cours'] + $c['devis'] ?></b><small><?= $c['devis'] ?> devis envoyé<?= $c['devis'] > 1 ? 's' : '' ?></small></a>
+      <a class="kpi win" href="<?= h($qs(['statut' => 'gagnee'])) ?>"><span>Gagnées</span><b><?= $c['gagnee'] ?></b><small><?= $ca > 0 ? h(euros($ca)) . ' signés' : 'chantiers signés' ?></small></a>
+      <div class="kpi"><span>Taux de transformation</span><b><?= $taux === null ? '–' : $taux . '&nbsp;%' ?></b><small><?= $c['perdue'] ?> perdue<?= $c['perdue'] > 1 ? 's' : '' ?></small></div>
+    </section>
+
+    <?php $v30 = (int)$db->query("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= date('now','localtime','-29 days')")->fetchColumn();
+          $d30 = (int)$db->query("SELECT COUNT(*) FROM demandes WHERE source = 'site' AND date(created_at) >= date('now','localtime','-29 days')")->fetchColumn(); ?>
+    <a class="trafic-strip" href="./?stats=1"><span>Trafic sur 30 jours</span><b><?= $v30 ?></b> visiteur<?= $v30 > 1 ? 's' : '' ?> · <b><?= $d30 ?></b> demande<?= $d30 > 1 ? 's' : '' ?> via le site<?= $v30 ? ' · <b>' . number_format($d30 / $v30 * 100, 1, ',', '') . '&nbsp;%</b> de conversion' : '' ?><i>Voir le trafic ›</i></a>
+
+    <section class="toolbar">
+      <nav class="seg">
+        <a href="<?= h($qs([])) ?>" class="<?= $filtre === '' ? 'on' : '' ?>">Toutes <i><?= $total ?></i></a>
+        <?php foreach (CRM_STATUTS as $k => $l): ?><a href="<?= h($qs(['statut' => $k])) ?>" class="<?= $filtre === $k ? 'on' : '' ?>"><?= h($l) ?> <i><?= $c[$k] ?></i></a><?php endforeach; ?>
+        <?php if ($relances): ?><a href="<?= h($qs(['statut' => 'relance'])) ?>" class="<?= $filtre === 'relance' ? 'on' : '' ?> warn">À relancer <i><?= $relances ?></i></a><?php endif; ?>
+      </nav>
+      <form class="search" method="get"><?php if ($filtre): ?><input type="hidden" name="statut" value="<?= h($filtre) ?>"><?php endif; ?>
+        <input type="search" name="q" value="<?= h($q) ?>" placeholder="Rechercher un nom, une commune, un téléphone…" aria-label="Rechercher"></form>
+      <a class="link" href="./?export=1">Exporter (Excel)</a>
+    </section>
+
+    <?php if (!$rows): ?>
+      <div class="empty card"><b><?= $total ? 'Aucune demande ne correspond.' : 'Aucune demande pour l\'instant.' ?></b>
+        <p class="muted"><?= $total ? 'Changez de filtre ou de recherche.' : 'Les demandes envoyées par le formulaire du site arriveront ici automatiquement. Vous pouvez aussi en ajouter une reçue par téléphone.' ?></p></div>
+    <?php else: ?>
+    <div class="table card"><table>
+      <thead><tr><th>Reçue le</th><th>Client</th><th>Commune</th><th>Projet</th><th>Statut</th><th class="num">Devis</th></tr></thead>
+      <tbody>
+      <?php foreach ($rows as $r): $late = $r['relance'] && $r['relance'] <= date('Y-m-d') && !in_array($r['statut'], ['gagnee', 'perdue'], true); ?>
+        <tr onclick="location.href='./?id=<?= (int)$r['id'] ?>'">
+          <td data-l="Reçue le"><?= h(fr_date($r['created_at'])) ?><?php if ($r['source'] === 'manuel'): ?> <span class="tag">ajoutée</span><?php endif; ?></td>
+          <td data-l="Client"><a href="./?id=<?= (int)$r['id'] ?>"><b><?= h($r['nom']) ?></b></a><small><?= h($r['tel']) ?></small></td>
+          <td data-l="Commune"><?= h($r['commune']) ?></td>
+          <td data-l="Projet"><?= h($r['type']) ?></td>
+          <td data-l="Statut"><?= badge($r['statut']) ?><?php if ($late): ?> <span class="tag warn">à relancer</span><?php endif; ?></td>
+          <td data-l="Devis" class="num"><?= h(euros($r['montant'] === null ? null : (float)$r['montant'])) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody></table></div>
+    <?php endif;
+    layout('Demandes', (string)ob_get_clean());
+}
+
+function page_form(?array $d): void {
+    $isNew = $d === null;
+    $d ??= ['id' => 0, 'ref' => '', 'nom' => '', 'tel' => '', 'email' => '', 'commune' => '', 'type' => 'Piscine neuve', 'message' => '',
+            'statut' => 'nouvelle', 'montant' => null, 'relance' => null, 'created_at' => null, 'source' => 'manuel', 'page' => ''];
+    $notes = [];
+    if (!$isNew) { $st = crm_db()->prepare('SELECT * FROM notes WHERE demande_id = ? ORDER BY at DESC, id DESC'); $st->execute([$d['id']]); $notes = $st->fetchAll(); }
+    $types = CRM_TYPES; if ($d['type'] !== '' && !in_array($d['type'], $types, true)) array_unshift($types, $d['type']);
+    $mailto = 'mailto:' . rawurlencode($d['email']) . '?subject=' . rawurlencode('Votre demande de devis piscine' . ($d['ref'] ? ' (' . $d['ref'] . ')' : ''));
+    ob_start(); ?>
+    <p class="back"><a class="link" href="./">← Toutes les demandes</a></p>
+    <?php if ($isNew): ?>
+      <h1>Nouvelle demande</h1><p class="muted">Pour une demande reçue par téléphone, sur un salon ou de bouche-à-oreille.</p>
+    <?php else: ?>
+      <div class="head">
+        <div><h1><?= h($d['nom']) ?></h1>
+          <p class="muted"><?= badge($d['statut']) ?> Réf. <code><?= h($d['ref']) ?></code> · reçue le <?= h(fr_date($d['created_at'])) ?> · <?= $d['source'] === 'site' ? 'formulaire du site' : 'ajoutée à la main' ?></p></div>
+        <div class="actions">
+          <?php if ($d['tel']): ?><a class="btn btn-brand" href="tel:<?= h(tel_href($d['tel'])) ?>">Appeler</a><?php endif; ?>
+          <?php if ($d['email']): ?><a class="btn" href="#repondre">Répondre</a><?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <form method="post" class="grid">
+      <input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="<?= $isNew ? 'create' : 'save' ?>"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+      <section class="card">
+        <h2>Client et projet</h2>
+        <div class="fields">
+          <label>Nom et prénom<input name="nom" value="<?= h($d['nom']) ?>" required></label>
+          <label>Téléphone<input name="tel" type="tel" value="<?= h($d['tel']) ?>"></label>
+          <label>E-mail<input name="email" type="email" value="<?= h($d['email']) ?>"></label>
+          <label>Commune du chantier<input name="commune" value="<?= h($d['commune']) ?>"></label>
+          <label class="full">Type de projet<select name="type"><?php foreach ($types as $t): ?><option<?= $t === $d['type'] ? ' selected' : '' ?>><?= h($t) ?></option><?php endforeach; ?></select></label>
+          <label class="full">Message du client<textarea name="message" rows="5"><?= h($d['message']) ?></textarea></label>
+        </div>
+      </section>
+      <?php if (!$isNew): ?>
+      <section class="card">
+        <h2>Suivi</h2>
+        <div class="fields">
+          <fieldset class="full statuts"><legend>Statut</legend>
+            <?php foreach (CRM_STATUTS as $k => $l): ?><label class="st s-<?= h($k) ?>"><input type="radio" name="statut" value="<?= h($k) ?>"<?= $d['statut'] === $k ? ' checked' : '' ?>><span><?= h($l) ?></span></label><?php endforeach; ?>
+          </fieldset>
+          <label>Montant du devis (€ TTC)<input name="montant" inputmode="decimal" value="<?= $d['montant'] === null ? '' : h(rtrim(rtrim(number_format((float)$d['montant'], 2, ',', ''), '0'), ',')) ?>" placeholder="ex. 9950"></label>
+          <label>À relancer le<input name="relance" type="date" value="<?= h($d['relance']) ?>"></label>
+          <label class="full">Ajouter une note<textarea name="note" rows="3" placeholder="Appel du 12/11 : visite prévue samedi…"></textarea></label>
+        </div>
+      </section>
+      <?php endif; ?>
+      <div class="savebar full"><button class="btn btn-brand"><?= $isNew ? 'Ajouter la demande' : 'Enregistrer' ?></button></div>
+    </form>
+
+    <?php if (!$isNew): ?>
+    <section class="card" id="repondre">
+      <h2>Répondre au client</h2>
+      <?php if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)): ?>
+        <p class="muted">Ajoutez une adresse e-mail valide dans la fiche pour pouvoir répondre d'ici.</p>
+      <?php else:
+        global $CFG; $from = $CFG['from'] ?? OLIVIER;
+        $draft = $_SESSION['draft'][$d['id']] ?? null;
+        $sujet = $draft['sujet'] ?? ('Votre projet de piscine' . ($d['commune'] ? ' à ' . $d['commune'] : '') . ' – Artisan Pisciniste'); ?>
+      <form method="post" enctype="multipart/form-data" class="composer" id="composer"
+            data-nom="<?= h($d['nom']) ?>" data-commune="<?= h($d['commune']) ?>" data-type="<?= h(mb_strtolower($d['type'])) ?>">
+        <input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="reply"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+        <p class="fromto"><span>De</span> <b>Olivier Rousseau</b> &lt;<?= h($from) ?>&gt; <span>À</span> <b><?= h($d['nom']) ?></b> &lt;<?= h($d['email']) ?>&gt;</p>
+        <div class="tpl" role="group" aria-label="Modèles de message">
+          <span class="muted">Modèle :</span>
+          <button type="button" class="chip" data-tpl="contact">Prise de contact et visite</button>
+          <button type="button" class="chip" data-tpl="devis">Envoi du devis</button>
+          <button type="button" class="chip" data-tpl="relance">Relance</button>
+        </div>
+        <label>Objet<input name="sujet" value="<?= h($sujet) ?>" required></label>
+        <label>Message<textarea name="corps" rows="10" required placeholder="Choisissez un modèle ou écrivez votre message…"><?= h($draft['corps'] ?? '') ?></textarea></label>
+        <p class="muted small">Votre signature (nom, téléphone, site et logo) est ajoutée automatiquement sous le message.</p>
+        <div class="composer-foot">
+          <label class="file">Pièce jointe (devis PDF, photo…)<input type="file" name="pj" accept=".pdf,.jpg,.jpeg,.png"></label>
+          <label class="check"><input type="checkbox" name="copie" value="1" checked> M'envoyer une copie</label>
+          <button class="btn btn-brand">Envoyer l'e-mail</button>
+        </div>
+      </form>
+      <script>
+      (()=>{const f=document.getElementById('composer');if(!f)return;const n=f.dataset.nom,c=f.dataset.commune,t=f.dataset.type;
+        const lieu=c?' à '+c:'',proj=t?' ('+t+')':'';
+        const T={
+          contact:{s:'Votre projet de piscine'+lieu+' – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nMerci pour votre demande concernant votre projet'+proj+lieu+'.\n\nJe vous propose de passer voir le terrain pour en parler sur place et préparer un devis précis. Quelles sont vos disponibilités dans les prochains jours ?\n\nVous pouvez aussi me joindre directement au 06 52 08 92 19.\n\nBien cordialement,'},
+          devis:{s:'Votre devis piscine – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nComme convenu, vous trouverez ci-joint le devis pour votre projet'+proj+lieu+'.\n\nJe reste à votre disposition pour en parler ou l\'ajuster si besoin.\n\nBien cordialement,'},
+          relance:{s:'Votre projet de piscine – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nJe reviens vers vous au sujet de votre projet de piscine'+lieu+'. Avez-vous eu le temps de prendre connaissance du devis ?\n\nJe reste disponible pour toute question, ou pour adapter la proposition à vos besoins.\n\nBien cordialement,'}};
+        f.querySelectorAll('[data-tpl]').forEach(b=>b.addEventListener('click',()=>{const x=T[b.dataset.tpl];
+          if(f.corps.value.trim()&&f.corps.value!==f.dataset.last&&!confirm('Remplacer le message en cours par ce modèle ?'))return;
+          f.sujet.value=x.s;f.corps.value=x.b;f.dataset.last=x.b;f.corps.focus();}));
+      })();
+      </script>
+      <?php endif; ?>
+    </section>
+
+    <section class="card" id="notes">
+      <h2>Historique et notes</h2>
+      <form method="post" class="addnote"><input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="note"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+        <input name="note" placeholder="Note rapide (appel, visite, relance…)" aria-label="Note rapide"><button class="btn">Ajouter</button></form>
+      <ol class="timeline"><?php foreach ($notes as $n): ?>
+        <li class="<?= $n['auto'] ? 'auto' : '' ?>"><time><?= h(fr_date($n['at'])) ?></time><p><?= nl2br(h($n['texte'])) ?></p></li>
+      <?php endforeach; ?></ol>
+    </section>
+    <details class="danger card"><summary>Supprimer cette demande</summary>
+      <form method="post"><input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+        <p class="muted">Suppression définitive de la demande et de ses notes, par exemple si le client le demande (RGPD). Pour une affaire non conclue, préférez le statut « Perdue » : elle restera dans les statistiques.</p>
+        <label class="check"><input type="checkbox" name="confirm" value="oui" required> Je confirme la suppression définitive</label>
+        <button class="btn btn-danger">Supprimer</button></form>
+    </details>
+    <?php endif;
+    layout($isNew ? 'Nouvelle demande' : $d['nom'], (string)ob_get_clean());
+}
+
+function page_stats(): void {
+    $db = crm_db();
+    $j = (int)($_GET['j'] ?? 30); if (!in_array($j, [7, 30, 90, 365], true)) $j = 30;
+    $from = "date('now','localtime','-" . ($j - 1) . " days')";
+    $prevFrom = "date('now','localtime','-" . (2 * $j - 1) . " days')";
+    $one = fn(string $sql) => (int)$db->query($sql)->fetchColumn();
+    $visiteurs = $one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $from");
+    $avant = $one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $prevFrom AND day < $from");
+    $vues = $one("SELECT COUNT(*) FROM visites WHERE day >= $from");
+    $demandes = $one("SELECT COUNT(*) FROM demandes WHERE source = 'site' AND date(created_at) >= $from");
+    $conv = $visiteurs ? $demandes / $visiteurs * 100 : null;
+    $mobile = $visiteurs ? round($one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $from AND device = 'Mobile'") / $visiteurs * 100) : null;
+    $evol = $avant ? round(($visiteurs - $avant) / $avant * 100) : null;
+
+    $parJour = [];
+    foreach ($db->query("SELECT day, COUNT(DISTINCT visitor) v, COUNT(*) n FROM visites WHERE day >= $from GROUP BY day") as $r) $parJour[$r['day']] = $r;
+    $dem = [];
+    foreach ($db->query("SELECT date(created_at) d, COUNT(*) n FROM demandes WHERE source = 'site' AND date(created_at) >= $from GROUP BY d") as $r) $dem[$r['d']] = (int)$r['n'];
+    $days = []; $max = 1;
+    for ($i = $j - 1; $i >= 0; $i--) {
+        $d = date('Y-m-d', strtotime("-$i days"));
+        $v = (int)($parJour[$d]['v'] ?? 0); $max = max($max, $v);
+        $days[] = ['d' => $d, 'v' => $v, 'n' => (int)($parJour[$d]['n'] ?? 0), 'dem' => $dem[$d] ?? 0];
+    }
+    $pages = $db->query("SELECT path, MAX(title) t, COUNT(*) n, COUNT(DISTINCT day || visitor) v FROM visites WHERE day >= $from GROUP BY path ORDER BY n DESC LIMIT 10")->fetchAll();
+    $sources = $db->query("SELECT source, COUNT(DISTINCT day || visitor) v FROM visites WHERE day >= $from AND source <> 'interne' GROUP BY source ORDER BY v DESC LIMIT 8")->fetchAll();
+    $totSrc = max(1, array_sum(array_column($sources, 'v')));
+    $nf = fn($n) => number_format((float)$n, 0, ',', "\u{202F}");
+    ob_start(); ?>
+    <div class="head"><div><h1>Trafic du site</h1><p class="muted">Mesure anonyme, sans cookie. Vos propres visites ne sont pas comptées.</p></div>
+      <nav class="seg"><?php foreach ([7 => '7 jours', 30 => '30 jours', 90 => '3 mois', 365 => '12 mois'] as $k => $l): ?><a href="./?stats=1&amp;j=<?= $k ?>" class="<?= $k === $j ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?></nav></div>
+
+    <section class="kpis">
+      <div class="kpi"><span>Visiteurs</span><b><?= $nf($visiteurs) ?></b><small><?= $evol === null ? 'sur la période' : ($evol >= 0 ? '+' : '') . $evol . '&nbsp;% vs période précédente' ?></small></div>
+      <div class="kpi"><span>Pages vues</span><b><?= $nf($vues) ?></b><small><?= $visiteurs ? number_format($vues / $visiteurs, 1, ',', '') . ' par visiteur' : '–' ?></small></div>
+      <div class="kpi hot"><span>Demandes via le site</span><b><?= $demandes ?></b><small>formulaire de devis</small></div>
+      <div class="kpi win"><span>Taux de conversion</span><b><?= $conv === null ? '–' : number_format($conv, 1, ',', '') . '&nbsp;%' ?></b><small>visiteurs → demandes</small></div>
+      <div class="kpi"><span>Sur mobile</span><b><?= $mobile === null ? '–' : $mobile . '&nbsp;%' ?></b><small>des visiteurs</small></div>
+    </section>
+
+    <section class="card">
+      <h2>Visiteurs par jour</h2>
+      <?php if (!$visiteurs): ?><p class="muted">Aucune visite enregistrée sur cette période pour l'instant. Les visites apparaissent ici au fur et à mesure.</p><?php else: ?>
+      <div class="chart" style="--n:<?= count($days) ?>">
+        <?php foreach ($days as $x): ?><div class="bar<?= $x['dem'] ? ' dem' : '' ?>" style="--h:<?= round($x['v'] / $max * 100) ?>%" title="<?= h(fr_date($x['d'], false)) ?> : <?= $x['v'] ?> visiteur<?= $x['v'] > 1 ? 's' : '' ?>, <?= $x['n'] ?> page<?= $x['n'] > 1 ? 's' : '' ?> vue<?= $x['n'] > 1 ? 's' : '' ?><?= $x['dem'] ? ', ' . $x['dem'] . ' demande' . ($x['dem'] > 1 ? 's' : '') : '' ?>"><i></i></div><?php endforeach; ?>
+      </div>
+      <div class="axis"><span><?= h(fr_date($days[0]['d'], false)) ?></span><span>max <?= $max ?> / jour</span><span><?= h(fr_date(end($days)['d'], false)) ?></span></div>
+      <p class="legend"><i class="lg-v"></i> visiteurs <i class="lg-d"></i> jour avec au moins une demande de devis</p>
+      <?php endif; ?>
+    </section>
+
+    <div class="grid2">
+      <section class="card"><h2>Pages les plus vues</h2>
+        <?php if (!$pages): ?><p class="muted">Pas encore de données.</p><?php else: ?>
+        <table class="mini"><thead><tr><th>Page</th><th class="num">Vues</th><th class="num">Visiteurs</th></tr></thead><tbody>
+        <?php foreach ($pages as $p): $label = $p['path'] === '/' ? 'Accueil' : ($p['t'] ?: $p['path']); ?>
+          <tr><td><a href="<?= h($p['path']) ?>" target="_blank" rel="noopener"><?= h($label) ?></a></td><td class="num"><?= $nf($p['n']) ?></td><td class="num"><?= $nf($p['v']) ?></td></tr>
+        <?php endforeach; ?></tbody></table><?php endif; ?>
+      </section>
+      <section class="card"><h2>D'où viennent les visiteurs</h2>
+        <?php if (!$sources): ?><p class="muted">Pas encore de données.</p><?php else: ?>
+        <ul class="sources"><?php foreach ($sources as $s): $pc = round($s['v'] / $totSrc * 100); ?>
+          <li><span><?= h($s['source']) ?></span><b><?= $pc ?>&nbsp;%</b><i style="--w:<?= $pc ?>%"></i></li>
+        <?php endforeach; ?></ul>
+        <p class="muted small">« Accès direct » : adresse tapée, favori, lien dans un e-mail ou une application. Pour le détail des recherches Google, voir la Search Console.</p>
+        <?php endif; ?>
+      </section>
+    </div>
+    <?php layout('Trafic', (string)ob_get_clean());
+}
