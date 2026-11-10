@@ -41,11 +41,25 @@ if (is_file($lock) && time() - filemtime($lock) < 30) reply(false, "Merci de pat
 @touch($lock);
 
 require __DIR__ . '/mail-template.php';
+require __DIR__ . '/crm-db.php';
 $now  = new DateTimeImmutable('now', new DateTimeZone('Europe/Paris'));
-$ref  = 'AP-' . $now->format('ymd-Hi') . '-' . strtoupper(bin2hex(random_bytes(2)));
+$ref  = crm_new_ref();
 $page = parse_url((string)($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH) ?: '';
+
+// 1. La demande est d'abord enregistrée dans le CRM : elle n'est jamais perdue, même si l'e-mail échoue.
+$crmId = 0;
+try {
+    $crmId = crm_add(['ref' => $ref, 'nom' => $nom, 'tel' => $tel, 'email' => $email, 'commune' => $commune,
+                      'type' => $type, 'message' => $msg, 'page' => $page], 'site');
+} catch (Throwable $e) {
+    error_log('CRM indisponible : ' . $e->getMessage());
+}
+$host = $_SERVER['HTTP_HOST'] ?? 'artisan-pisciniste.fr';
+$crmUrl = $crmId ? 'https://' . $host . '/admin/?id=' . $crmId : '';
+
+// 2. Puis l'e-mail de notification à Olivier.
 $mail = ap_devis_email(['nom' => $nom, 'tel' => $tel, 'email' => $email, 'commune' => $commune, 'type' => $type,
-                        'message' => $msg, 'ref' => $ref, 'date' => $now, 'page' => $page]);
+                        'message' => $msg, 'ref' => $ref, 'date' => $now, 'page' => $page, 'crm_url' => $crmUrl]);
 
 // E-mail HTML + version texte + logo intégré (affiché même si les images distantes sont bloquées)
 $bR = 'rel_' . bin2hex(random_bytes(8)); $bA = 'alt_' . bin2hex(random_bytes(8));
@@ -62,4 +76,6 @@ $headers = "From: $fromName <$FROM>\r\nReply-To: " . str_replace(["\r", "\n"], '
          . "MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=\"$bR\"; type=\"multipart/alternative\"\r\n"
          . "X-AP-Reference: $ref\r\n";
 $ok = mail($TO, $subject, $body, $headers, '-f' . $FROM);
-reply($ok, $ok ? '' : "L'envoi a échoué. Appelez le 06 52 08 92 19.", $wantsJson);
+if (!$ok && $crmId) crm_note($crmId, "Attention : l'e-mail de notification n'a pas pu être envoyé.", true);
+$saved = $ok || $crmId > 0;
+reply($saved, $saved ? '' : "L'envoi a échoué. Appelez le 06 52 08 92 19.", $wantsJson);

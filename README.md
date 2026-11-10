@@ -14,3 +14,12 @@ Site statique d'Artisan Pisciniste (Olivier Rousseau, Elven, Morbihan) : HTML, C
 ## Adresses
 
 Les pages sont des fichiers `page.html` servies sans extension (`/page`) grâce à `.htaccess`, pour garder exactement les adresses de l'ancien site, notamment celles des 8 articles du blog.
+
+## Mini CRM (/admin/)
+
+- Chaque demande du formulaire est enregistrée dans le CRM avant l'envoi de l'e-mail : elle n'est jamais perdue.
+- Données : base SQLite `crm-data/crm.sqlite`, rangée **à côté** de `public_html` (hors du web, non touchée par les déploiements Git).
+  Si ce dossier n'est pas accessible en écriture, elle est créée dans `public_html/crm-data/`, interdit d'accès.
+- Première visite de `https://artisan-pisciniste.fr/admin/` : création du mot de passe (10 caractères minimum).
+- **Mot de passe oublié** : dans le Gestionnaire de fichiers, supprimer la ligne n'est pas possible simplement ; le plus simple est de demander une réinitialisation (script ponctuel) — ne jamais supprimer `crm.sqlite`, qui contient toutes les demandes.
+- Sauvegarde : télécharger régulièrement l'export Excel depuis le CRM ; les sauvegardes Hostinger couvrent aussi le dossier `crm-data`.

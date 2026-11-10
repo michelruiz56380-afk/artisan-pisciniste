@@ -49,7 +49,9 @@ function ap_devis_email(array $d): array {
     $btn = fn(string $href, string $label, bool $primary) =>
         '<a href="' . $h($href) . '" style="display:inline-block;margin:0 8px 10px 0;padding:12px 20px;border-radius:999px;font-size:15px;font-weight:600;white-space:nowrap;text-decoration:none;'
         . ($primary ? 'background:#4f70ff;color:#ffffff' : 'background:#eef1f8;color:#1b2a78') . '">' . $label . '</a>';
-    $buttons = ($d['tel'] !== '' ? $btn('tel:' . $telHref, 'Appeler le client', true) : '')
+    $crm = $d['crm_url'] ?? '';
+    $buttons = ($crm !== '' ? '<a href="' . $h($crm) . '" style="display:inline-block;margin:0 8px 10px 0;padding:12px 20px;border-radius:999px;font-size:15px;font-weight:600;white-space:nowrap;text-decoration:none;background:#050a1f;color:#ffffff">Ouvrir dans le CRM</a>' : '')
+             . ($d['tel'] !== '' ? $btn('tel:' . $telHref, 'Appeler le client', true) : '')
              . $btn($mailHref, 'Répondre par e-mail', $d['tel'] === '')
              . ($commune !== '' ? $btn($mapHref, 'Voir la commune', false) : '');
 
@@ -104,6 +106,7 @@ HTML;
           . "Client    : {$d['nom']}\nTéléphone : " . ($d['tel'] ?: 'non renseigné') . "\nE-mail    : {$d['email']}\n"
           . "Commune   : " . ($commune ?: 'non renseignée') . "\nProjet    : $type\n\n"
           . "Message :\n" . ($d['message'] ?: '(aucun)') . "\n\n"
+          . (($d['crm_url'] ?? '') !== '' ? "Ouvrir dans le CRM : {$d['crm_url']}\n\n" : '')
           . "-- \nEnvoyé depuis le formulaire de artisan-pisciniste.fr. « Répondre » écrit directement au client.\n";
 
     return ['subject' => $subject, 'html' => $html, 'text' => $text];
