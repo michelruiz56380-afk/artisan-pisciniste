@@ -21,5 +21,5 @@ Les pages sont des fichiers `page.html` servies sans extension (`/page`) grâce 
 - Données : base SQLite `crm-data/crm.sqlite`, rangée **à côté** de `public_html` (hors du web, non touchée par les déploiements Git).
   Si ce dossier n'est pas accessible en écriture, elle est créée dans `public_html/crm-data/`, interdit d'accès.
 - Première visite de `https://artisan-pisciniste.fr/admin/` : création du mot de passe (10 caractères minimum).
-- **Mot de passe oublié** : dans le Gestionnaire de fichiers, supprimer la ligne n'est pas possible simplement ; le plus simple est de demander une réinitialisation (script ponctuel) — ne jamais supprimer `crm.sqlite`, qui contient toutes les demandes.
+- **Mot de passe oublié** : dans le Gestionnaire de fichiers, créer un fichier vide nommé `reinitialiser-mot-de-passe` dans le dossier `crm-data`, puis ouvrir `/admin/` pour choisir un nouveau mot de passe (les demandes sont conservées). Ne jamais supprimer `crm.sqlite`.
 - Sauvegarde : télécharger régulièrement l'export Excel depuis le CRM ; les sauvegardes Hostinger couvrent aussi le dossier `crm-data`.

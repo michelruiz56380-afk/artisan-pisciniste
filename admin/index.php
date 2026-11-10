@@ -49,6 +49,9 @@ try { $db = crm_db(); } catch (Throwable $e) {
 
 /* ---------- authentification ---------- */
 $hash = crm_setting('password_hash');
+// Mot de passe oublié : créer un fichier vide « reinitialiser-mot-de-passe » dans le dossier crm-data (Gestionnaire de fichiers)
+$resetFile = crm_dir() . '/reinitialiser-mot-de-passe';
+if (is_file($resetFile)) $hash = null;
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 $error = null;
 
@@ -60,7 +63,7 @@ if (!$hash && ($_POST['action'] ?? '') === 'setup') {
     if (mb_strlen($p1) < 10) $error = 'Choisissez un mot de passe d\'au moins 10 caractères.';
     elseif ($p1 !== $p2) $error = 'Les deux mots de passe ne sont pas identiques.';
     else {
-        crm_setting('password_hash', password_hash($p1, PASSWORD_DEFAULT));
+        crm_setting('password_hash', password_hash($p1, PASSWORD_DEFAULT)); @unlink($resetFile);
         session_regenerate_id(true); $_SESSION['ok'] = true; flash('Mot de passe créé. Bienvenue dans le CRM.'); go();
     }
 }
