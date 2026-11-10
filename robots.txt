@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /contact.php
+
+Sitemap: https://artisan-pisciniste.fr/sitemap.xml
