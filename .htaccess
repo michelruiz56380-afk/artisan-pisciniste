@@ -14,6 +14,9 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP_HOST} ^artisan-pisciniste\.fr$ [NC]
 RewriteRule ^ https://artisan-pisciniste.fr%{REQUEST_URI} [L,R=301]
 
+# 0. Fichiers de vérification Google Search Console : servis tels quels, sans redirection
+RewriteRule ^google[0-9a-f]+\.html$ - [L]
+
 # 2. /page.html -> /page  (les adresses publiques n'ont jamais d'extension)
 RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
 RewriteRule ^ / [L,R=301]
