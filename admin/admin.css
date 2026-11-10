@@ -133,3 +133,17 @@ label{display:grid;gap:5px;font-size:13px;color:var(--ink-2);align-content:start
 .auth{max-width:420px;margin:8vh auto 0;text-align:center;display:grid;gap:10px;justify-items:center;padding:34px 28px}
 .auth form{display:grid;gap:14px;width:100%;text-align:left;margin-top:8px}
 .auth .btn{width:100%;padding:12px}
+
+/* réponse au client */
+.composer{display:grid;gap:12px}
+.fromto{margin:0;font-size:14px;color:var(--ink);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:baseline}
+.fromto span{color:var(--ink-2);font-size:13px}
+.fromto span:not(:first-child){margin-left:10px}
+.tpl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font:500 13.5px inherit;font-family:inherit;color:var(--navy);cursor:pointer}
+.chip:hover{border-color:var(--brand)}
+.small{font-size:13px}
+.composer-foot{display:flex;flex-wrap:wrap;gap:14px;align-items:end;justify-content:space-between}
+.file{flex:1 1 260px}
+.file input{background:#f4f6fb;padding:8px}
+.timeline p{white-space:normal}

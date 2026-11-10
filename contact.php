@@ -62,20 +62,8 @@ $mail = ap_devis_email(['nom' => $nom, 'tel' => $tel, 'email' => $email, 'commun
                         'message' => $msg, 'ref' => $ref, 'date' => $now, 'page' => $page, 'crm_url' => $crmUrl]);
 
 // E-mail HTML + version texte + logo intégré (affiché même si les images distantes sont bloquées)
-$bR = 'rel_' . bin2hex(random_bytes(8)); $bA = 'alt_' . bin2hex(random_bytes(8));
-$logo = chunk_split(base64_encode((string)@file_get_contents(__DIR__ . '/assets/img/logo-mail.png')));
-$body = "--$bR\r\nContent-Type: multipart/alternative; boundary=\"$bA\"\r\n\r\n"
-      . "--$bA\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($mail['text'])) . "\r\n"
-      . "--$bA\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($mail['html'])) . "\r\n"
-      . "--$bA--\r\n\r\n"
-      . "--$bR\r\nContent-Type: image/png; name=\"logo.png\"\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <" . AP_LOGO_CID . ">\r\nContent-Disposition: inline; filename=\"logo.png\"\r\n\r\n" . $logo . "\r\n"
-      . "--$bR--\r\n";
-$subject = '=?UTF-8?B?' . base64_encode($mail['subject']) . '?=';
-$fromName = '=?UTF-8?B?' . base64_encode('Site Artisan Pisciniste') . '?=';
-$headers = "From: $fromName <$FROM>\r\nReply-To: " . str_replace(["\r", "\n"], '', $nom) . " <$email>\r\n"
-         . "MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=\"$bR\"; type=\"multipart/alternative\"\r\n"
-         . "X-AP-Reference: $ref\r\n";
-$ok = mail($TO, $subject, $body, $headers, '-f' . $FROM);
+$ok = ap_send($TO, $mail['subject'], $mail['html'], $mail['text'], $FROM, 'Site Artisan Pisciniste',
+              '=?UTF-8?B?' . base64_encode($nom) . "?= <$email>", '', null, ['X-AP-Reference' => $ref]);
 if (!$ok && $crmId) crm_note($crmId, "Attention : l'e-mail de notification n'a pas pu être envoyé.", true);
 $saved = $ok || $crmId > 0;
 reply($saved, $saved ? '' : "L'envoi a échoué. Appelez le 06 52 08 92 19.", $wantsJson);

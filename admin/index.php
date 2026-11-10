@@ -7,6 +7,9 @@
  * Mot de passe oublié : voir le README du dépôt. */
 declare(strict_types=1);
 require dirname(__DIR__) . '/crm-db.php';
+require dirname(__DIR__) . '/mail-template.php';
+$CFG = is_file(dirname(__DIR__) . '/contact-config.php') ? require dirname(__DIR__) . '/contact-config.php' : [];
+const OLIVIER = 'olivier@artisan-pisciniste.fr';
 
 date_default_timezone_set('Europe/Paris');
 header('X-Robots-Tag: noindex, nofollow');
@@ -111,6 +114,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($montant !== null && (float)$montant !== (float)($d['montant'] ?? -1)) crm_note($id, 'Montant du devis : ' . euros($montant), true);
         if ($f('note', 4000) !== '') crm_note($id, $f('note', 4000));
         flash('Enregistré.'); go('?id=' . $id);
+    }
+    if ($a === 'reply') {
+        global $CFG;
+        $from = $CFG['from'] ?? OLIVIER;
+        $sujet = $f('sujet', 200); $corps = trim(str_replace("\0", '', (string)($_POST['corps'] ?? '')));
+        $_SESSION['draft'][$id] = ['sujet' => $sujet, 'corps' => $corps];
+        if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)) { flash("L'adresse e-mail du client n'est pas valide : corrigez-la dans la fiche."); go('?id=' . $id . '#repondre'); }
+        if ($sujet === '' || mb_strlen($corps) < 5) { flash("Indiquez un objet et un message."); go('?id=' . $id . '#repondre'); }
+        $pj = null;
+        if (!empty($_FILES['pj']['name']) && ($_FILES['pj']['error'] ?? 1) === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo((string)$_FILES['pj']['name'], PATHINFO_EXTENSION));
+            $types = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
+            if (!isset($types[$ext]) || $_FILES['pj']['size'] > 8 * 1024 * 1024) { flash('Pièce jointe refusée : PDF, JPG ou PNG de 8 Mo maximum.'); go('?id=' . $id . '#repondre'); }
+            $pj = ['name' => (string)$_FILES['pj']['name'], 'type' => $types[$ext], 'data' => (string)file_get_contents($_FILES['pj']['tmp_name'])];
+        } elseif (!empty($_FILES['pj']['name'])) { flash("La pièce jointe n'a pas pu être lue (trop lourde ?)."); go('?id=' . $id . '#repondre'); }
+        $mail = ap_reply_email($corps);
+        $copie = !empty($_POST['copie']) ? $from : '';
+        $ok = ap_send($d['email'], $sujet, $mail['html'], $mail['text'], $from, 'Olivier Rousseau · Artisan Pisciniste', $from, $copie, $pj, ['X-AP-Reference' => $d['ref']]);
+        if (!$ok) { flash("L'e-mail n'a pas pu partir. Réessayez dans un instant, ou écrivez depuis votre messagerie."); go('?id=' . $id . '#repondre'); }
+        unset($_SESSION['draft'][$id]);
+        crm_note($id, "✉ E-mail envoyé à {$d['email']} — « $sujet »" . ($pj ? " (pièce jointe : {$pj['name']})" : '') . "\n\n" . $corps);
+        if ($d['statut'] === 'nouvelle') {
+            crm_db()->prepare('UPDATE demandes SET statut=?, updated_at=? WHERE id=?')->execute(['en_cours', crm_now(), $id]);
+            crm_note($id, 'Statut : Nouvelle → En cours', true);
+        } else crm_db()->prepare('UPDATE demandes SET updated_at=? WHERE id=?')->execute([crm_now(), $id]);
+        flash('E-mail envoyé à ' . $d['email'] . ($copie ? ' (copie dans votre boîte).' : '.'));
+        go('?id=' . $id . '#notes');
     }
     if ($a === 'note' && $f('note', 4000) !== '') {
         crm_note($id, $f('note', 4000));
@@ -265,7 +295,7 @@ function page_form(?array $d): void {
           <p class="muted"><?= badge($d['statut']) ?> Réf. <code><?= h($d['ref']) ?></code> · reçue le <?= h(fr_date($d['created_at'])) ?> · <?= $d['source'] === 'site' ? 'formulaire du site' : 'ajoutée à la main' ?></p></div>
         <div class="actions">
           <?php if ($d['tel']): ?><a class="btn btn-brand" href="tel:<?= h(tel_href($d['tel'])) ?>">Appeler</a><?php endif; ?>
-          <?php if ($d['email']): ?><a class="btn" href="<?= h($mailto) ?>">Écrire</a><?php endif; ?>
+          <?php if ($d['email']): ?><a class="btn" href="#repondre">Répondre</a><?php endif; ?>
         </div>
       </div>
     <?php endif; ?>
@@ -300,6 +330,51 @@ function page_form(?array $d): void {
     </form>
 
     <?php if (!$isNew): ?>
+    <section class="card" id="repondre">
+      <h2>Répondre au client</h2>
+      <?php if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)): ?>
+        <p class="muted">Ajoutez une adresse e-mail valide dans la fiche pour pouvoir répondre d'ici.</p>
+      <?php else:
+        global $CFG; $from = $CFG['from'] ?? OLIVIER;
+        $draft = $_SESSION['draft'][$d['id']] ?? null;
+        $sujet = $draft['sujet'] ?? ('Votre projet de piscine' . ($d['commune'] ? ' à ' . $d['commune'] : '') . ' – Artisan Pisciniste'); ?>
+      <form method="post" enctype="multipart/form-data" class="composer" id="composer"
+            data-nom="<?= h($d['nom']) ?>" data-commune="<?= h($d['commune']) ?>" data-type="<?= h(mb_strtolower($d['type'])) ?>">
+        <input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="reply"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+        <p class="fromto"><span>De</span> <b>Olivier Rousseau</b> &lt;<?= h($from) ?>&gt; <span>À</span> <b><?= h($d['nom']) ?></b> &lt;<?= h($d['email']) ?>&gt;</p>
+        <div class="tpl" role="group" aria-label="Modèles de message">
+          <span class="muted">Modèle :</span>
+          <button type="button" class="chip" data-tpl="contact">Prise de contact et visite</button>
+          <button type="button" class="chip" data-tpl="devis">Envoi du devis</button>
+          <button type="button" class="chip" data-tpl="relance">Relance</button>
+        </div>
+        <label>Objet<input name="sujet" value="<?= h($sujet) ?>" required></label>
+        <label>Message<textarea name="corps" rows="10" required placeholder="Choisissez un modèle ou écrivez votre message…"><?= h($draft['corps'] ?? '') ?></textarea></label>
+        <p class="muted small">Votre signature (nom, téléphone, site et logo) est ajoutée automatiquement sous le message.</p>
+        <div class="composer-foot">
+          <label class="file">Pièce jointe (devis PDF, photo…)<input type="file" name="pj" accept=".pdf,.jpg,.jpeg,.png"></label>
+          <label class="check"><input type="checkbox" name="copie" value="1" checked> M'envoyer une copie</label>
+          <button class="btn btn-brand">Envoyer l'e-mail</button>
+        </div>
+      </form>
+      <script>
+      (()=>{const f=document.getElementById('composer');if(!f)return;const n=f.dataset.nom,c=f.dataset.commune,t=f.dataset.type;
+        const lieu=c?' à '+c:'',proj=t?' ('+t+')':'';
+        const T={
+          contact:{s:'Votre projet de piscine'+lieu+' – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nMerci pour votre demande concernant votre projet'+proj+lieu+'.\n\nJe vous propose de passer voir le terrain pour en parler sur place et préparer un devis précis. Quelles sont vos disponibilités dans les prochains jours ?\n\nVous pouvez aussi me joindre directement au 06 52 08 92 19.\n\nBien cordialement,'},
+          devis:{s:'Votre devis piscine – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nComme convenu, vous trouverez ci-joint le devis pour votre projet'+proj+lieu+'.\n\nJe reste à votre disposition pour en parler ou l\'ajuster si besoin.\n\nBien cordialement,'},
+          relance:{s:'Votre projet de piscine – Artisan Pisciniste',
+            b:'Bonjour '+n+',\n\nJe reviens vers vous au sujet de votre projet de piscine'+lieu+'. Avez-vous eu le temps de prendre connaissance du devis ?\n\nJe reste disponible pour toute question, ou pour adapter la proposition à vos besoins.\n\nBien cordialement,'}};
+        f.querySelectorAll('[data-tpl]').forEach(b=>b.addEventListener('click',()=>{const x=T[b.dataset.tpl];
+          if(f.corps.value.trim()&&f.corps.value!==f.dataset.last&&!confirm('Remplacer le message en cours par ce modèle ?'))return;
+          f.sujet.value=x.s;f.corps.value=x.b;f.dataset.last=x.b;f.corps.focus();}));
+      })();
+      </script>
+      <?php endif; ?>
+    </section>
+
     <section class="card" id="notes">
       <h2>Historique et notes</h2>
       <form method="post" class="addnote"><input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="note"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">

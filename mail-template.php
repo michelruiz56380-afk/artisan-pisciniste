@@ -111,3 +111,70 @@ HTML;
 
     return ['subject' => $subject, 'html' => $html, 'text' => $text];
 }
+
+/**
+ * Envoie un e-mail HTML + texte avec le logo intégré, et éventuellement une pièce jointe.
+ * $pj = ['name' => 'devis.pdf', 'type' => 'application/pdf', 'data' => <octets>]
+ */
+function ap_send(string $to, string $subject, string $html, string $text, string $fromEmail, string $fromName,
+                 string $replyTo = '', string $bcc = '', ?array $pj = null, array $extra = []): bool {
+    $enc = fn(string $s) => '=?UTF-8?B?' . base64_encode($s) . '?=';
+    $clean = fn(string $s) => str_replace(["\r", "\n"], '', $s);
+    $bA = 'alt_' . bin2hex(random_bytes(8)); $bR = 'rel_' . bin2hex(random_bytes(8)); $bM = 'mix_' . bin2hex(random_bytes(8));
+    $logo = chunk_split(base64_encode((string)@file_get_contents(__DIR__ . '/assets/img/logo-mail.png')));
+    $related = "Content-Type: multipart/related; boundary=\"$bR\"; type=\"multipart/alternative\"\r\n\r\n"
+        . "--$bR\r\nContent-Type: multipart/alternative; boundary=\"$bA\"\r\n\r\n"
+        . "--$bA\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($text)) . "\r\n"
+        . "--$bA\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($html)) . "\r\n"
+        . "--$bA--\r\n\r\n"
+        . "--$bR\r\nContent-Type: image/png; name=\"logo.png\"\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <" . AP_LOGO_CID . ">\r\nContent-Disposition: inline; filename=\"logo.png\"\r\n\r\n" . $logo . "\r\n"
+        . "--$bR--\r\n";
+    if ($pj) {
+        $name = $clean(preg_replace('/[^\w.\- ]+/u', '_', $pj['name']) ?? 'piece-jointe');
+        // nom de fichier : tel quel s'il est en ASCII, sinon encodé selon la RFC 2231
+        $fn = fn(string $k, string $v) => preg_match('/^[\x20-\x7E]+$/', $v) ? "$k=\"" . str_replace('"', '', $v) . "\"" : "$k*=UTF-8''" . rawurlencode($v);
+        $body = "--$bM\r\n" . $related . "\r\n"
+            . "--$bM\r\nContent-Type: {$pj['type']}; " . $fn('name', $name) . "\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; " . $fn('filename', $name) . "\r\n\r\n"
+            . chunk_split(base64_encode($pj['data'])) . "\r\n--$bM--\r\n";
+        [$ctHeader, $body] = ["Content-Type: multipart/mixed; boundary=\"$bM\"", $body];
+    } else {
+        [$ctHeaderRaw, $rest] = explode("\r\n\r\n", $related, 2);
+        [$ctHeader, $body] = [$ctHeaderRaw, $rest];
+    }
+    $headers = "From: {$enc($fromName)} <" . $clean($fromEmail) . ">\r\n"
+        . ($replyTo !== '' ? "Reply-To: " . $clean($replyTo) . "\r\n" : '')
+        . ($bcc !== '' ? "Bcc: " . $clean($bcc) . "\r\n" : '')
+        . "MIME-Version: 1.0\r\n$ctHeader\r\n";
+    foreach ($extra as $k => $v) $headers .= $clean($k) . ': ' . $clean($v) . "\r\n";
+    return mail($clean($to), $enc($subject), $body, $headers, '-f' . $clean($fromEmail));
+}
+
+/** Réponse d'Olivier au client : texte libre + signature avec logo. */
+function ap_reply_email(string $corps): array {
+    $h = fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $paras = '';
+    foreach (preg_split("/\n\s*\n/", trim(str_replace("\r", '', $corps))) as $p)
+        $paras .= '<p style="margin:0 0 16px">' . nl2br($h(trim($p))) . '</p>';
+    $html = <<<HTML
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0c1222">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:24px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+  <tr><td style="font-size:16px;line-height:1.6;color:#0c1222">{$paras}</td></tr>
+  <tr><td style="padding-top:8px">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="border-top:1px solid #e6e9f0;padding-top:18px"><tr>
+      <td style="padding:18px 16px 0 0;vertical-align:top"><img src="cid:{$h(AP_LOGO_CID)}" width="56" height="56" alt="Artisan Pisciniste" style="display:block;border:0"></td>
+      <td style="padding-top:18px;vertical-align:top;font-size:14px;line-height:1.5;color:#5a6478">
+        <strong style="font-size:16px;color:#0c1222">Olivier Rousseau</strong><br>
+        Artisan pisciniste · Elven (56)<br>
+        <a href="tel:+33652089219" style="color:#3b5cf0;text-decoration:none">06 52 08 92 19</a> ·
+        <a href="https://artisan-pisciniste.fr" style="color:#3b5cf0;text-decoration:none">artisan-pisciniste.fr</a>
+      </td></tr></table>
+  </td></tr>
+</table></td></tr></table>
+</body></html>
+HTML;
+    $text = trim($corps) . "\n\n-- \nOlivier Rousseau\nArtisan pisciniste · Elven (56)\n06 52 08 92 19 · https://artisan-pisciniste.fr\n";
+    return ['html' => $html, 'text' => $text];
+}
