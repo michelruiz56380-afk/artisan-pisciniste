@@ -6,9 +6,12 @@ ErrorDocument 404 /404.html
 <IfModule mod_rewrite.c>
 RewriteEngine On
 
-# 1. HTTPS + domaine sans www (une seule adresse officielle)
-RewriteCond %{HTTPS} !=on [OR]
-RewriteCond %{HTTP_HOST} ^www\. [NC]
+# 1. HTTPS + domaine sans www (une seule adresse officielle).
+#    Limité au vrai domaine : le site reste testable sur l'adresse temporaire Hostinger.
+RewriteCond %{HTTP_HOST} ^www\.artisan-pisciniste\.fr$ [NC]
+RewriteRule ^ https://artisan-pisciniste.fr%{REQUEST_URI} [L,R=301]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP_HOST} ^artisan-pisciniste\.fr$ [NC]
 RewriteRule ^ https://artisan-pisciniste.fr%{REQUEST_URI} [L,R=301]
 
 # 2. /page.html -> /page  (les adresses publiques n'ont jamais d'extension)
