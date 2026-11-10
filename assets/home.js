@@ -122,16 +122,17 @@ document.querySelector('#hint span').textContent=isTouch?"Touchez l'eau":"Passez
   const cam=new THREE.PerspectiveCamera(32,1,.1,100);
   scene.add(new THREE.HemisphereLight(0xffffff,0x7d8aa8,.95));
   const sun=new THREE.DirectionalLight(0xffffff,.75);sun.position.set(4,8,5);scene.add(sun);
-  const L=4.65,Wd=2.15,D=1.4,T=.08;
-  const shellMat=new THREE.MeshStandardMaterial({color:0xf2f4f5,roughness:.32,metalness:0});
+  const L=4.25,Wd=2.35,D=1.5,T=.08;
+  const shellMat=new THREE.MeshStandardMaterial({color:0x8f989e,roughness:.32,metalness:0});
   const copeMat=new THREE.MeshStandardMaterial({color:0xf1ede6,roughness:.85});
   const g=new THREE.Group();scene.add(g);
   const box=(w,h,d,x,y,z,m)=>{const me=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||shellMat);me.position.set(x,y,z);g.add(me);return me;};
   box(L,T,Wd,0,-D,0);
   box(L,D,T,0,-D/2,Wd/2);box(L,D,T,0,-D/2,-Wd/2);
   box(T,D,Wd,L/2,-D/2,0);box(T,D,Wd,-L/2,-D/2,0);
-  for(let k=1;k<=4;k++){const top=-.28*k,len=.3*k,h=D-.28*k;box(len,h,Wd*.55,-L/2+len/2,-D+h/2,-Wd/2+Wd*.55/2);}
-  box(.45,D-.45,Wd,L/2-.225,-D+(D-.45)/2,0);
+  /* escalier d'angle : 3 marches triangulaires emboîtées */
+  for(let k=1;k<=3;k++){const leg=.5+.4*k,h=D-.36*k;const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(leg,0);sh.lineTo(0,-leg);sh.lineTo(0,0);
+    const me=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false}),shellMat);me.rotation.x=-Math.PI/2;me.position.set(-L/2+T/2,-D,-Wd/2+T/2);g.add(me);}
   const deckMat=new THREE.MeshStandardMaterial({color:0xcfc6b6,roughness:.95});
   const E=1.5,Hh=D+.12;
   box(L+2*E,Hh,E,0,-Hh/2,Wd/2+E/2,deckMat);box(L+2*E,Hh,E,0,-Hh/2,-Wd/2-E/2,deckMat);
@@ -140,7 +141,7 @@ document.querySelector('#hint span').textContent=isTouch?"Touchez l'eau":"Passez
   box(L+2*cw,ct,cw,0,ct/2,Wd/2+cw/2,copeMat);box(L+2*cw,ct,cw,0,ct/2,-Wd/2-cw/2,copeMat);
   box(cw,ct,Wd,L/2+cw/2,ct/2,0,copeMat);box(cw,ct,Wd,-L/2-cw/2,ct/2,0,copeMat);
   const wg=new THREE.PlaneGeometry(L-T,Wd-T,64,32);
-  const waterMat=new THREE.MeshPhongMaterial({color:0x46c9e6,transparent:true,opacity:.42,shininess:140,specular:0xffffff});
+  const waterMat=new THREE.MeshPhongMaterial({color:0x2b8aa0,transparent:true,opacity:.42,shininess:140,specular:0xffffff});
   const water=new THREE.Mesh(wg,waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.12;g.add(water);
   const pos=wg.attributes.position;
   let theta=-.75,phi=.82,target={theta,phi},auto=!reduce,drag=null;

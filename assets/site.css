@@ -184,6 +184,10 @@ p{margin:0}
 .specs span{font-size:14px;color:var(--ink-2)}
 @media (max-width:640px){.specs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .fine{font-size:12px;color:var(--ink-2);margin-top:18px;line-height:1.5;max-width:90ch}
+.tanna-photo{margin:clamp(40px,6vw,64px) 0 0;border-radius:28px;overflow:hidden;position:relative}
+.tanna-photo img{width:100%;aspect-ratio:21/9;object-fit:cover}
+.tanna-photo figcaption{position:absolute;left:24px;bottom:20px;color:#fff;font:600 17px var(--text);text-shadow:0 1px 12px rgba(0,0,0,.5)}
+@media (max-width:640px){.tanna-photo img{aspect-ratio:4/3}}
 .product-ctas{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-top:28px}
 
 /* ---------- horizontal gallery ---------- */
