@@ -15,6 +15,8 @@ RewriteCond %{HTTP_HOST} ^artisan-pisciniste\.fr$ [NC]
 RewriteRule ^ https://artisan-pisciniste.fr%{REQUEST_URI} [L,R=301]
 
 # 2. /page.html -> /page  (les adresses publiques n'ont jamais d'extension)
+RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+RewriteRule ^ / [L,R=301]
 RewriteCond %{THE_REQUEST} \s/+([^?\s]*?)\.html[\s?] [NC]
 RewriteRule ^ /%1 [L,R=301,NE]
 RewriteRule ^index$ / [L,R=301]
