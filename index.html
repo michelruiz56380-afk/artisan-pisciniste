@@ -314,11 +314,12 @@
           <input type="radio" name="type" id="t4" value="Pompe et filtration"><label for="t4">Pompe et filtration</label>
         </div>
       </fieldset>
-      <label for="f-nom">Nom et prénom<input id="f-nom" name="nom" autocomplete="name" required></label>
-      <label for="f-tel">Téléphone<input id="f-tel" name="tel" type="tel" autocomplete="tel"></label>
-      <label class="full" for="f-mail">E-mail<input id="f-mail" name="email" type="email" autocomplete="email" required></label>
-      <label class="full" for="f-com">Commune du chantier<input id="f-com" name="commune" placeholder="ex. Vannes, Ploërmel, Questembert"></label>
-      <label class="full" for="f-msg">Votre message<textarea id="f-msg" name="message" placeholder="Dimensions souhaitées, accès au terrain, délai…"></textarea></label>
+      <label for="f-nom"><span>Nom et prénom <abbr class="req" title="obligatoire">*</abbr></span><input id="f-nom" name="nom" autocomplete="name" required aria-describedby="e-nom"><small class="err" id="e-nom"></small></label>
+      <label for="f-tel"><span>Téléphone <abbr class="req" title="obligatoire">*</abbr></span><input id="f-tel" name="tel" type="tel" autocomplete="tel" inputmode="tel" required aria-describedby="e-tel"><small class="err" id="e-tel"></small></label>
+      <label class="full" for="f-mail"><span>E-mail <abbr class="req" title="obligatoire">*</abbr></span><input id="f-mail" name="email" type="email" autocomplete="email" required aria-describedby="e-email"><small class="err" id="e-email"></small></label>
+      <label class="full" for="f-com"><span>Commune du chantier <abbr class="req" title="obligatoire">*</abbr></span><input id="f-com" name="commune" autocomplete="address-level2" placeholder="ex. Vannes, Ploërmel, Questembert" required aria-describedby="e-commune"><small class="err" id="e-commune"></small></label>
+      <label class="full" for="f-msg"><span>Votre message <abbr class="req" title="obligatoire">*</abbr></span><textarea id="f-msg" name="message" placeholder="Dimensions souhaitées, accès au terrain, délai…" required aria-describedby="e-message"></textarea><small class="err" id="e-message"></small></label>
+      <p class="full reqnote"><abbr class="req" title="obligatoire">*</abbr> Tous les champs sont obligatoires.</p>
       <div class="hp" aria-hidden="true"><label for="f-site">Site web<input id="f-site" name="site" tabindex="-1" autocomplete="off"></label></div><p class="consent">Vos informations servent uniquement à répondre à votre demande. <a href="/terms-and-conditions">En savoir plus</a>.</p><button class="pill pill-brand" type="submit">Envoyer ma demande</button>
       <p class="sent" id="sent" hidden></p>
     </form>

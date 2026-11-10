@@ -26,8 +26,14 @@ $nom = $clean('nom', 120); $tel = $clean('tel', 40); $email = $clean('email', 16
 $commune = $clean('commune', 120); $type = $clean('type', 60); $msg = $clean('message', 5000);
 $nom = str_replace("\n", ' ', $nom); $commune = str_replace("\n", ' ', $commune); $type = str_replace("\n", ' ', $type);
 
-if ($nom === '' || !filter_var($email, FILTER_VALIDATE_EMAIL))
-    reply(false, "Indiquez votre nom et une adresse e-mail valide.", $wantsJson);
+// Tous les champs sont obligatoires (même contrôle que dans le navigateur)
+$missing = [];
+if (mb_strlen($nom) < 2) $missing[] = 'nom et prénom';
+if (strlen(preg_replace('/\D/', '', $tel) ?? '') < 10) $missing[] = 'téléphone';
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $missing[] = 'e-mail valide';
+if (mb_strlen($commune) < 2) $missing[] = 'commune du chantier';
+if (mb_strlen($msg) < 5) $missing[] = 'message';
+if ($missing) reply(false, 'Merci de compléter : ' . implode(', ', $missing) . '.', $wantsJson);
 
 // limite simple : 1 envoi / 30 s par adresse IP
 $lock = sys_get_temp_dir() . '/ap_' . md5($_SERVER['REMOTE_ADDR'] ?? '');

@@ -262,7 +262,15 @@ document.querySelectorAll('.copy').forEach(btn=>btn.addEventListener('click',()=
 }));
 $('devis').addEventListener('submit',async e=>{
   e.preventDefault();const f=e.target,out=$('sent'),btn=f.querySelector('[type=submit]');out.hidden=false;
-  if(!f.nom.value.trim()||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.value)){out.textContent="Indiquez votre nom et une adresse e-mail valide pour qu'Olivier puisse vous répondre.";return;}
+  const rules={nom:v=>v.length>=2||'Indiquez votre nom et prénom.',
+    tel:v=>v.replace(/\D/g,'').length>=10||'Indiquez un numéro de téléphone complet (10 chiffres).',
+    email:v=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)||'Indiquez une adresse e-mail valide.',
+    commune:v=>v.length>=2||'Indiquez la commune du chantier.',
+    message:v=>v.length>=5||'Décrivez votre projet en quelques mots.'};
+  let first=null;
+  for(const k in rules){const el=f.elements[k],r=rules[k](el.value.trim()),ok=r===true;
+    el.setAttribute('aria-invalid',ok?'false':'true');$('e-'+k).textContent=ok?'':r;if(!ok&&!first)first=el;}
+  if(first){out.textContent='Merci de compléter les champs signalés en rouge.';first.focus();return;}
   btn.disabled=true;out.textContent='Envoi en cours…';
   try{const r=await fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}});const j=await r.json();
     if(j.ok){f.reset();out.textContent='Merci, votre demande est bien partie. Olivier vous rappelle rapidement.';}
@@ -276,3 +284,6 @@ $('devis').addEventListener('submit',async e=>{
 (()=>{const tabs=[...document.querySelectorAll('.seg [role=tab]')];if(!tabs.length)return;
 const sel=t=>{tabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;document.getElementById(b.getAttribute('aria-controls')).hidden=!on;});};
 tabs.forEach((b,i)=>{b.addEventListener('click',()=>sel(b));b.addEventListener('keydown',e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(d){const n=tabs[(i+d+tabs.length)%tabs.length];sel(n);n.focus();}});});})();
+
+/* ===== Form: clear a field's error while typing ===== */
+document.querySelectorAll('#devis [aria-describedby]').forEach(el=>el.addEventListener('input',()=>{if(el.getAttribute('aria-invalid')==='true'){el.setAttribute('aria-invalid','false');const e=document.getElementById(el.getAttribute('aria-describedby'));if(e)e.textContent='';}}));
