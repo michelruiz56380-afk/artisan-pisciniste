@@ -86,6 +86,8 @@ if ($hash && ($_POST['action'] ?? '') === 'login') {
 }
 
 if (empty($_SESSION['ok'])) { page_auth(!$hash, $error); exit; }
+// Navigateur de l'admin : ses visites sur le site ne sont pas comptées dans le trafic
+if (empty($_COOKIE['ap_staff'])) setcookie('ap_staff', '1', ['expires' => time() + 31536000, 'path' => '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
 
 /* ---------- actions ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -169,6 +171,7 @@ if (isset($_GET['export'])) {
 }
 
 /* ---------- pages ---------- */
+if (isset($_GET['stats'])) { page_stats(); exit; }
 if (isset($_GET['new'])) { page_form(null); exit; }
 if (isset($_GET['id'])) { $d = crm_get((int)$_GET['id']); $d ? page_form($d) : go(); exit; }
 page_list();
@@ -183,7 +186,7 @@ function layout(string $title, string $body): void { ?>
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="/assets/img/logo.png" alt="" width="30" height="30"><span>CRM <b>Artisan Pisciniste</b></span></a>
-  <?php if (!empty($_SESSION['ok'])): ?><nav><a href="./?new=1" class="btn btn-brand">+ Nouvelle demande</a><a href="./?logout=1" class="link">Se déconnecter</a></nav><?php endif; ?>
+  <?php if (!empty($_SESSION['ok'])): ?><nav><a href="./" class="tab<?= isset($_GET['stats']) ? '' : ' on' ?>">Demandes</a><a href="./?stats=1" class="tab<?= isset($_GET['stats']) ? ' on' : '' ?>">Trafic</a><a href="./?new=1" class="btn btn-brand" aria-label="Nouvelle demande">+<span class="lbl"> Nouvelle</span></a><a href="./?logout=1" class="link">Déconnexion</a></nav><?php endif; ?>
 </div></header>
 <main class="wrap"><?php if ($m = flash()): ?><p class="flash"><?= h($m) ?></p><?php endif; ?><?= $body ?></main>
 </body></html>
@@ -243,6 +246,10 @@ function page_list(): void {
       <a class="kpi win" href="<?= h($qs(['statut' => 'gagnee'])) ?>"><span>Gagnées</span><b><?= $c['gagnee'] ?></b><small><?= $ca > 0 ? h(euros($ca)) . ' signés' : 'chantiers signés' ?></small></a>
       <div class="kpi"><span>Taux de transformation</span><b><?= $taux === null ? '–' : $taux . '&nbsp;%' ?></b><small><?= $c['perdue'] ?> perdue<?= $c['perdue'] > 1 ? 's' : '' ?></small></div>
     </section>
+
+    <?php $v30 = (int)$db->query("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= date('now','localtime','-29 days')")->fetchColumn();
+          $d30 = (int)$db->query("SELECT COUNT(*) FROM demandes WHERE source = 'site' AND date(created_at) >= date('now','localtime','-29 days')")->fetchColumn(); ?>
+    <a class="trafic-strip" href="./?stats=1"><span>Trafic sur 30 jours</span><b><?= $v30 ?></b> visiteur<?= $v30 > 1 ? 's' : '' ?> · <b><?= $d30 ?></b> demande<?= $d30 > 1 ? 's' : '' ?> via le site<?= $v30 ? ' · <b>' . number_format($d30 / $v30 * 100, 1, ',', '') . '&nbsp;%</b> de conversion' : '' ?><i>Voir le trafic ›</i></a>
 
     <section class="toolbar">
       <nav class="seg">
@@ -391,4 +398,75 @@ function page_form(?array $d): void {
     </details>
     <?php endif;
     layout($isNew ? 'Nouvelle demande' : $d['nom'], (string)ob_get_clean());
+}
+
+function page_stats(): void {
+    $db = crm_db();
+    $j = (int)($_GET['j'] ?? 30); if (!in_array($j, [7, 30, 90, 365], true)) $j = 30;
+    $from = "date('now','localtime','-" . ($j - 1) . " days')";
+    $prevFrom = "date('now','localtime','-" . (2 * $j - 1) . " days')";
+    $one = fn(string $sql) => (int)$db->query($sql)->fetchColumn();
+    $visiteurs = $one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $from");
+    $avant = $one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $prevFrom AND day < $from");
+    $vues = $one("SELECT COUNT(*) FROM visites WHERE day >= $from");
+    $demandes = $one("SELECT COUNT(*) FROM demandes WHERE source = 'site' AND date(created_at) >= $from");
+    $conv = $visiteurs ? $demandes / $visiteurs * 100 : null;
+    $mobile = $visiteurs ? round($one("SELECT COUNT(DISTINCT day || visitor) FROM visites WHERE day >= $from AND device = 'Mobile'") / $visiteurs * 100) : null;
+    $evol = $avant ? round(($visiteurs - $avant) / $avant * 100) : null;
+
+    $parJour = [];
+    foreach ($db->query("SELECT day, COUNT(DISTINCT visitor) v, COUNT(*) n FROM visites WHERE day >= $from GROUP BY day") as $r) $parJour[$r['day']] = $r;
+    $dem = [];
+    foreach ($db->query("SELECT date(created_at) d, COUNT(*) n FROM demandes WHERE source = 'site' AND date(created_at) >= $from GROUP BY d") as $r) $dem[$r['d']] = (int)$r['n'];
+    $days = []; $max = 1;
+    for ($i = $j - 1; $i >= 0; $i--) {
+        $d = date('Y-m-d', strtotime("-$i days"));
+        $v = (int)($parJour[$d]['v'] ?? 0); $max = max($max, $v);
+        $days[] = ['d' => $d, 'v' => $v, 'n' => (int)($parJour[$d]['n'] ?? 0), 'dem' => $dem[$d] ?? 0];
+    }
+    $pages = $db->query("SELECT path, MAX(title) t, COUNT(*) n, COUNT(DISTINCT day || visitor) v FROM visites WHERE day >= $from GROUP BY path ORDER BY n DESC LIMIT 10")->fetchAll();
+    $sources = $db->query("SELECT source, COUNT(DISTINCT day || visitor) v FROM visites WHERE day >= $from AND source <> 'interne' GROUP BY source ORDER BY v DESC LIMIT 8")->fetchAll();
+    $totSrc = max(1, array_sum(array_column($sources, 'v')));
+    $nf = fn($n) => number_format((float)$n, 0, ',', "\u{202F}");
+    ob_start(); ?>
+    <div class="head"><div><h1>Trafic du site</h1><p class="muted">Mesure anonyme, sans cookie. Vos propres visites ne sont pas comptées.</p></div>
+      <nav class="seg"><?php foreach ([7 => '7 jours', 30 => '30 jours', 90 => '3 mois', 365 => '12 mois'] as $k => $l): ?><a href="./?stats=1&amp;j=<?= $k ?>" class="<?= $k === $j ? 'on' : '' ?>"><?= $l ?></a><?php endforeach; ?></nav></div>
+
+    <section class="kpis">
+      <div class="kpi"><span>Visiteurs</span><b><?= $nf($visiteurs) ?></b><small><?= $evol === null ? 'sur la période' : ($evol >= 0 ? '+' : '') . $evol . '&nbsp;% vs période précédente' ?></small></div>
+      <div class="kpi"><span>Pages vues</span><b><?= $nf($vues) ?></b><small><?= $visiteurs ? number_format($vues / $visiteurs, 1, ',', '') . ' par visiteur' : '–' ?></small></div>
+      <div class="kpi hot"><span>Demandes via le site</span><b><?= $demandes ?></b><small>formulaire de devis</small></div>
+      <div class="kpi win"><span>Taux de conversion</span><b><?= $conv === null ? '–' : number_format($conv, 1, ',', '') . '&nbsp;%' ?></b><small>visiteurs → demandes</small></div>
+      <div class="kpi"><span>Sur mobile</span><b><?= $mobile === null ? '–' : $mobile . '&nbsp;%' ?></b><small>des visiteurs</small></div>
+    </section>
+
+    <section class="card">
+      <h2>Visiteurs par jour</h2>
+      <?php if (!$visiteurs): ?><p class="muted">Aucune visite enregistrée sur cette période pour l'instant. Les visites apparaissent ici au fur et à mesure.</p><?php else: ?>
+      <div class="chart" style="--n:<?= count($days) ?>">
+        <?php foreach ($days as $x): ?><div class="bar<?= $x['dem'] ? ' dem' : '' ?>" style="--h:<?= round($x['v'] / $max * 100) ?>%" title="<?= h(fr_date($x['d'], false)) ?> : <?= $x['v'] ?> visiteur<?= $x['v'] > 1 ? 's' : '' ?>, <?= $x['n'] ?> page<?= $x['n'] > 1 ? 's' : '' ?> vue<?= $x['n'] > 1 ? 's' : '' ?><?= $x['dem'] ? ', ' . $x['dem'] . ' demande' . ($x['dem'] > 1 ? 's' : '') : '' ?>"><i></i></div><?php endforeach; ?>
+      </div>
+      <div class="axis"><span><?= h(fr_date($days[0]['d'], false)) ?></span><span>max <?= $max ?> / jour</span><span><?= h(fr_date(end($days)['d'], false)) ?></span></div>
+      <p class="legend"><i class="lg-v"></i> visiteurs <i class="lg-d"></i> jour avec au moins une demande de devis</p>
+      <?php endif; ?>
+    </section>
+
+    <div class="grid2">
+      <section class="card"><h2>Pages les plus vues</h2>
+        <?php if (!$pages): ?><p class="muted">Pas encore de données.</p><?php else: ?>
+        <table class="mini"><thead><tr><th>Page</th><th class="num">Vues</th><th class="num">Visiteurs</th></tr></thead><tbody>
+        <?php foreach ($pages as $p): $label = $p['path'] === '/' ? 'Accueil' : ($p['t'] ?: $p['path']); ?>
+          <tr><td><a href="<?= h($p['path']) ?>" target="_blank" rel="noopener"><?= h($label) ?></a></td><td class="num"><?= $nf($p['n']) ?></td><td class="num"><?= $nf($p['v']) ?></td></tr>
+        <?php endforeach; ?></tbody></table><?php endif; ?>
+      </section>
+      <section class="card"><h2>D'où viennent les visiteurs</h2>
+        <?php if (!$sources): ?><p class="muted">Pas encore de données.</p><?php else: ?>
+        <ul class="sources"><?php foreach ($sources as $s): $pc = round($s['v'] / $totSrc * 100); ?>
+          <li><span><?= h($s['source']) ?></span><b><?= $pc ?>&nbsp;%</b><i style="--w:<?= $pc ?>%"></i></li>
+        <?php endforeach; ?></ul>
+        <p class="muted small">« Accès direct » : adresse tapée, favori, lien dans un e-mail ou une application. Pour le détail des recherches Google, voir la Search Console.</p>
+        <?php endif; ?>
+      </section>
+    </div>
+    <?php layout('Trafic', (string)ob_get_clean());
 }

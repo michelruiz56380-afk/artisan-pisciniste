@@ -1,4 +1,6 @@
 (()=>{
+/* Mesure d'audience anonyme (sans cookie) : une page vue = un signal vers /stat.php */
+try{if(location.protocol==='https:'&&navigator.doNotTrack!=='1'&&navigator.sendBeacon)navigator.sendBeacon('/stat.php',new Blob([JSON.stringify({p:location.pathname,t:document.title,r:document.referrer})],{type:'text/plain'}));}catch(e){}
 /* Opening a page from a link always starts at the top (back/forward keeps the reading position) */
 (()=>{const nt=(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0]||{}).type;
   if(location.hash||nt==='back_forward')return;

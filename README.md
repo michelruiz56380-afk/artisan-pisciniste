@@ -23,3 +23,8 @@ Les pages sont des fichiers `page.html` servies sans extension (`/page`) grâce 
 - Première visite de `https://artisan-pisciniste.fr/admin/` : création du mot de passe (10 caractères minimum).
 - **Mot de passe oublié** : dans le Gestionnaire de fichiers, créer un fichier vide nommé `reinitialiser-mot-de-passe` dans le dossier `crm-data`, puis ouvrir `/admin/` pour choisir un nouveau mot de passe (les demandes sont conservées). Ne jamais supprimer `crm.sqlite`.
 - Sauvegarde : télécharger régulièrement l'export Excel depuis le CRM ; les sauvegardes Hostinger couvrent aussi le dossier `crm-data`.
+
+## Trafic (/admin/?stats=1)
+
+- `stat.php` reçoit un signal à chaque page vue (envoyé par `assets/site.js`), sans cookie : seule une empreinte du jour, non réversible, sert à compter les visiteurs uniques. Données conservées 13 mois, dans la même base que le CRM.
+- Ne sont pas comptés : les robots, les navigateurs « Ne pas me pister », et le navigateur avec lequel on s'est connecté au CRM.

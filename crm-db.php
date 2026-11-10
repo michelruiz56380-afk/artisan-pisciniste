@@ -50,6 +50,11 @@ function crm_db(): PDO {
     $pdo->exec('CREATE INDEX IF NOT EXISTS notes_demande ON notes(demande_id)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS reglages (k TEXT PRIMARY KEY, v TEXT NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS tentatives (ip TEXT NOT NULL, at INTEGER NOT NULL)');
+    // Mesure d'audience anonyme : pas de cookie, pas d'IP conservée (empreinte du jour non réversible)
+    $pdo->exec('CREATE TABLE IF NOT EXISTS visites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL, at TEXT NOT NULL, path TEXT NOT NULL, title TEXT NOT NULL DEFAULT \'\',
+        source TEXT NOT NULL DEFAULT \'\', visitor TEXT NOT NULL, device TEXT NOT NULL DEFAULT \'\')');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS visites_day ON visites(day)');
     return $pdo;
 }
 
