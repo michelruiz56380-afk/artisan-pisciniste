@@ -4,9 +4,11 @@
  * /admin/?id=12      fiche d'une demande
  * /admin/?new=1      ajouter une demande à la main
  * /admin/?export=1   export CSV (Excel)
+ * /admin/devis.php   devis dictés (DevisVoice)
  * Mot de passe oublié : voir le README du dépôt. */
 declare(strict_types=1);
 require dirname(__DIR__) . '/crm-db.php';
+require dirname(__DIR__) . '/devis-db.php';
 require dirname(__DIR__) . '/mail-template.php';
 $CFG = is_file(dirname(__DIR__) . '/contact-config.php') ? require dirname(__DIR__) . '/contact-config.php' : [];
 const OLIVIER = 'olivier@artisan-pisciniste.fr';
@@ -186,7 +188,7 @@ function layout(string $title, string $body): void { ?>
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="/assets/img/logo.png" alt="" width="30" height="30"><span>CRM <b>Artisan Pisciniste</b></span></a>
-  <?php if (!empty($_SESSION['ok'])): ?><nav><a href="./" class="tab<?= isset($_GET['stats']) ? '' : ' on' ?>">Demandes</a><a href="./?stats=1" class="tab<?= isset($_GET['stats']) ? ' on' : '' ?>">Trafic</a><a href="./?new=1" class="btn btn-brand" aria-label="Nouvelle demande">+<span class="lbl"> Nouvelle</span></a><a href="./?logout=1" class="link">Déconnexion</a></nav><?php endif; ?>
+  <?php if (!empty($_SESSION['ok'])): ?><nav><a href="./" class="tab<?= isset($_GET['stats']) ? '' : ' on' ?>">Demandes</a><a href="devis.php" class="tab">Devis</a><a href="./?stats=1" class="tab<?= isset($_GET['stats']) ? ' on' : '' ?>">Trafic</a><a href="./?new=1" class="btn btn-brand" aria-label="Nouvelle demande">+<span class="lbl"> Nouvelle</span></a><a href="./?logout=1" class="link">Déconnexion</a></nav><?php endif; ?>
 </div></header>
 <main class="wrap"><?php if ($m = flash()): ?><p class="flash"><?= h($m) ?></p><?php endif; ?><?= $body ?></main>
 </body></html>
@@ -302,6 +304,7 @@ function page_form(?array $d): void {
           <p class="muted"><?= badge($d['statut']) ?> Réf. <code><?= h($d['ref']) ?></code> · reçue le <?= h(fr_date($d['created_at'])) ?> · <?= $d['source'] === 'site' ? 'formulaire du site' : 'ajoutée à la main' ?></p></div>
         <div class="actions">
           <?php if ($d['tel']): ?><a class="btn btn-brand" href="tel:<?= h(tel_href($d['tel'])) ?>">Appeler</a><?php endif; ?>
+          <a class="btn" href="devis.php?demande=<?= (int)$d['id'] ?>">Créer un devis</a>
           <?php if ($d['email']): ?><a class="btn" href="#repondre">Répondre</a><?php endif; ?>
         </div>
       </div>
@@ -336,7 +339,16 @@ function page_form(?array $d): void {
       <div class="savebar full"><button class="btn btn-brand"><?= $isNew ? 'Ajouter la demande' : 'Enregistrer' ?></button></div>
     </form>
 
-    <?php if (!$isNew): ?>
+    <?php if (!$isNew):
+      $dv = devis_db()->prepare('SELECT id, numero, statut, titre, total_ttc, updated_at FROM devis WHERE demande_id = ? ORDER BY created_at DESC'); $dv->execute([$d['id']]); $dvs = $dv->fetchAll(); ?>
+    <section class="card" id="devis">
+      <h2>Devis</h2>
+      <?php if (!$dvs): ?><p class="muted">Aucun devis pour ce client. <a href="devis.php?demande=<?= (int)$d['id'] ?>">Préparer un devis</a> par la dictée ou depuis le catalogue.</p>
+      <?php else: ?><table class="mini"><thead><tr><th>N°</th><th>Objet</th><th>Statut</th><th class="num">TTC</th></tr></thead><tbody>
+        <?php foreach ($dvs as $x): ?><tr onclick="location.href='devis.php#devis-<?= (int)$x['id'] ?>'"><td><a href="devis.php#devis-<?= (int)$x['id'] ?>"><code><?= h($x['numero']) ?></code></a></td><td><?= h($x['titre']) ?></td><td><?= h(DEVIS_STATUTS[$x['statut']] ?? $x['statut']) ?></td><td class="num"><?= h(number_format((float)$x['total_ttc'], 2, ',', "\u{202F}")) ?>&nbsp;€</td></tr><?php endforeach; ?>
+      </tbody></table><?php endif; ?>
+    </section>
+
     <section class="card" id="repondre">
       <h2>Répondre au client</h2>
       <?php if (!filter_var($d['email'], FILTER_VALIDATE_EMAIL)): ?>
