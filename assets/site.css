@@ -395,6 +395,15 @@ article .cover img{transform:scale(1.14) translateY(calc(var(--py,0) * 1px));wil
 .card.feature{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(20px,4vw,48px);align-items:center}
 .card.feature h3{font-size:clamp(26px,3.2vw,40px);letter-spacing:-.025em;line-height:1.1}
 @media (max-width:760px){.card.feature{grid-template-columns:1fr}}
+.keypoints{background:var(--mist);border-radius:20px;padding:22px 26px;margin:0 0 1.6em;font-size:17px}
+.keypoints b{display:block;font-family:var(--display);font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:var(--link);margin-bottom:8px}
+.keypoints ul{margin:0;padding-left:1.1em}
+.keypoints li+li{margin-top:.45em}
+.faq{margin-top:2.4em;border-top:1px solid var(--line);padding-top:.4em}
+.faq h3{font-family:var(--display);font-size:19px;font-weight:650;letter-spacing:-.01em;margin:1.4em 0 .3em}
+.faq p{margin:0;color:var(--ink-2)}
+.prose .sources{margin-top:2.4em;font-size:13px;color:var(--ink-2)}
+.prose .sources a{color:var(--ink-2)}
 .legal{max-width:72ch}
 .legal h2{font-size:24px;margin-top:1.6em}
 .e404{min-height:70vh;display:grid;place-items:center;text-align:center}
