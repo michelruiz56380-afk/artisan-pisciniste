@@ -4,6 +4,8 @@ Usage: build.py prod  <out_dir>   -> files ready to upload to Hostinger (public_
        build.py preview <out_dir> -> self-contained variant for the Claude artifact preview
 """
 import json, re, sys, os, shutil, html, datetime
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from articles_v2 import ARTICLES as ARTICLES_V2, UPDATED as ARTICLES_UPDATED, SOURCES as ARTICLE_SOURCES
 from PIL import Image, ImageDraw
 
 MODE, OUT = sys.argv[1], sys.argv[2]
@@ -51,7 +53,7 @@ logo = Image.open(f'{S}/logo/crop.png').convert('RGBA')
 for size, name in [(256, 'logo'), (512, 'logo-512'), (180, 'apple-touch-icon'), (48, 'favicon-48')]:
     logo.resize((size, size), Image.LANCZOS).save(f'{OUT}/assets/img/{name}.png', optimize=True)
 OG = {k: og(f'{S}/{p}', 'og-' + k) for k, p in [('home', 'img/img_8341.jpg'), ('rect', 'img/pc28904jpg_63b53ddad9e2f7.63969944.jpg'),
-      ('stone', 'img/fp4.jpg'), ('local', 'dl/local-technique.jpg'), ('hivernage', 'dl/hivernage.jpg'),
+      ('stone', 'img/fp4.jpg'), ('tanna', 'sup/m-tanna.jpg'), ('local', 'dl/local-technique.jpg'), ('hivernage', 'dl/hivernage.jpg'),
       ('filtration', 'dl/filtration.jpg'), ('tendances', 'dl/tendances.jpg')]}
 
 Image.open(f'{S}/img/olivier.webp').convert('RGB').crop((110, 20, 540, 450)).resize((132, 132), Image.LANCZOS).save(f'{OUT}/assets/img/olivier-face.webp', 'WEBP', quality=80)
@@ -67,14 +69,14 @@ def frdate(iso):
 ART = [  # slug, tag, image key (None = drawn cover), og key, seo title (kept close to the old one)
  ('la-revolution-des-piscines-coques-polyester-dans-le-morbihan', 'Dossier', 'stone', 'stone', 'Artisan pisciniste dans le Morbihan : installation de coques polyester'),
  ('fourniture-et-mise-en-place-de-piscines-coque-polyester-dans-le-morbihan', 'Construction', 'rect', 'rect', 'Fourniture et mise en place de piscines coque polyester dans le Morbihan'),
- ('les-avantages-des-minipiscines-de-moins-de-10-m-dans-le-morbihan-', 'Mini piscine', 'stone', 'stone', 'Les avantages des mini piscines de moins de 10 m² dans le Morbihan'),
+ ('les-avantages-des-minipiscines-de-moins-de-10-m-dans-le-morbihan-', 'Mini piscine', 'tanna', 'tanna', 'Les avantages des mini piscines de moins de 10 m² dans le Morbihan'),
  ('confection-de-locaux-techniques-optimisation-hydrauliques-domotique-dans-le-morbihan-', 'Équipement', 'local', 'local', 'Locaux techniques, hydraulique et domotique de piscine dans le Morbihan'),
  ('solutions-techniques-pour-le-chauffage-de-piscine-un-guide-detaille', 'Équipement', None, 'home', 'Chauffage de piscine : solaire, pompe à chaleur, réchauffeur électrique'),
  ('limportance-cruciale-de-lentretien-de-la-filtration-pour-les-piscines-privees', 'Entretien', 'filtration', 'filtration', "L'importance de l'entretien de la filtration pour les piscines privées"),
  ('hivernage-et-estivage-de-piscines-dans-le-morbihan-limportance-dun-entretien-regulier', 'Entretien', 'hivernage', 'hivernage', "Hivernage et remise en route de piscine dans le Morbihan"),
  ('tendances-du-marche-des-piscines-residentielles', 'Tendances', 'tendances', 'tendances', 'Tendances du marché des piscines résidentielles'),
 ]
-COVER_ALT = {'stone': "Petite piscine coque avec banquette, entourée d'un muret en pierre", 'rect': 'Piscine coque rectangulaire posée dans un jardin engazonné',
+COVER_ALT = {'tanna': 'Mini piscine coque Tanna en coloris gris, posée dans une pelouse', 'stone': "Petite piscine coque avec banquette, entourée d'un muret en pierre", 'rect': 'Piscine coque rectangulaire posée dans un jardin engazonné',
   'local': "Local technique de piscine : filtre à sable, pompe et vannes de distribution", 'filtration': "Vue sous l'eau du fond carrelé d'une piscine",
   'hivernage': 'Bassin vidé pendant un chantier de rénovation', 'tendances': "Bouée gonflable sur une piscine au bord de la mer"}
 
@@ -109,9 +111,18 @@ for slug, tag, ik, ogk, seo in ART:
     desc = (p.get('meta') or {}).get('description', '').strip()
     if slug.startswith('la-revolution'):
         desc = "Plus de 25 ans d'expérience dans l'installation de coques polyester et de mini piscines dans le Morbihan. Un artisan pisciniste à Elven, du conseil à la mise en eau."
-    words = len(re.sub('<[^>]+>', ' ', body).split())
+    v2 = ARTICLES_V2.get(slug)
+    keypoints, faq, updated = [], [], None
+    if v2:   # version réécrite (novembre 2026) : remplace le texte repris de l'ancien site
+        title, seo, desc, keypoints, faq, updated = v2['title'], v2['seo'], v2['desc'], v2['keypoints'], v2['faq'], ARTICLES_UPDATED
+        def _link(m):
+            x = m.group(1)
+            return (('/' if PROD else 'index.html') + x) if x.startswith('#') else url(x)
+        body = re.sub(r'@@([^@]+)@@', _link, v2['body'].strip())
+    words = len(re.sub('<[^>]+>', ' ', body + ' '.join(q + ' ' + a for q, a in faq)).split())
     articles.append(dict(slug=slug, tag=tag, img=ik, og=OG[ogk], seo=seo, title=title, body=body, desc=desc,
-        date=p.get('date'), mins=max(2, round(words / 200)), author='Olivier Rousseau'))
+        date=p.get('date'), mins=max(2, round(words / 200)), author='Olivier Rousseau',
+        keypoints=keypoints, faq=faq, updated=updated))
 dated = sorted([a for a in articles if a['date']], key=lambda a: a['date'], reverse=True)
 articles_sorted = [a for a in articles if not a['date']] + dated
 
@@ -277,6 +288,15 @@ article .cover img{transform:scale(1.14) translateY(calc(var(--py,0) * 1px));wil
 .card.feature{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(20px,4vw,48px);align-items:center}
 .card.feature h3{font-size:clamp(26px,3.2vw,40px);letter-spacing:-.025em;line-height:1.1}
 @media (max-width:760px){.card.feature{grid-template-columns:1fr}}
+.keypoints{background:var(--mist);border-radius:20px;padding:22px 26px;margin:0 0 1.6em;font-size:17px}
+.keypoints b{display:block;font-family:var(--display);font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:var(--link);margin-bottom:8px}
+.keypoints ul{margin:0;padding-left:1.1em}
+.keypoints li+li{margin-top:.45em}
+.faq{margin-top:2.4em;border-top:1px solid var(--line);padding-top:.4em}
+.faq h3{font-family:var(--display);font-size:19px;font-weight:650;letter-spacing:-.01em;margin:1.4em 0 .3em}
+.faq p{margin:0;color:var(--ink-2)}
+.prose .sources{margin-top:2.4em;font-size:13px;color:var(--ink-2)}
+.prose .sources a{color:var(--ink-2)}
 .legal{max-width:72ch}
 .legal h2{font-size:24px;margin-top:1.6em}
 .e404{min-height:70vh;display:grid;place-items:center;text-align:center}
@@ -410,6 +430,10 @@ for a in articles:
     same = [o for o in others if o['tag'] == a['tag']]
     related = (same + [o for o in others if o not in same])[:3]
     when = f'Publié le <time datetime="{a["date"][:10]}">{frdate(a["date"])}</time> · ' if a['date'] else ''
+    if a.get('updated'): when += f'Mis à jour le <time datetime="{a["updated"]}">{frdate(a["updated"])}</time> · '
+    kp = ('<aside class="keypoints"><b>L\'essentiel</b><ul>' + ''.join(f'<li>{html.escape(x)}</li>' for x in a['keypoints']) + '</ul></aside>') if a.get('keypoints') else ''
+    faqh = ('<section class="faq"><h2>Questions fréquentes</h2>' + ''.join(f'<h3>{html.escape(q)}</h3><p>{html.escape(r)}</p>' for q, r in a['faq']) + '</section>') if a.get('faq') else ''
+    srch = ('<p class="sources">Sources officielles : ' + ' · '.join(f'<a href="{u}" rel="noopener">{html.escape(n.split(" — ")[0])}</a>' for n, u in ARTICLE_SOURCES) + '</p>') if a.get('updated') else ''
     body = f'''{nav(current='Conseils')}
 <div class="readbar" aria-hidden="true"><span></span></div>
 <main class="inner-page">
@@ -422,7 +446,7 @@ for a in articles:
         <div class="byline"><img src="{A}img/olivier-face.webp" alt="" width="44" height="44" style="border-radius:50%"><span><b>{a['author']}</b>, artisan pisciniste à Elven<br>{when}{a['mins']} min de lecture</span></div>
       </header>
       {cover_html(a, 'cover', eager=True)}
-      <div class="prose">{a['body']}</div>
+      <div class="prose">{kp}{a['body']}{faqh}{srch}</div>
       <aside class="cta-box">
         <h2>Un projet de piscine dans le Morbihan ?</h2>
         <p>Un seul interlocuteur du devis au suivi après chantier : Olivier étudie votre terrain, vous remet un devis détaillé gratuit, réalise les travaux et reste votre contact ensuite.</p>
@@ -440,7 +464,7 @@ for a in articles:
 {FOOTER}'''
     ld = [{"@context": "https://schema.org", "@type": "BlogPosting", "headline": a['title'][:110], "description": a['desc'],
            "image": a['og'], "author": {"@type": "Person", "name": "Olivier Rousseau"}, "publisher": {"@id": DOMAIN + "/#entreprise"},
-           "mainEntityOfPage": DOMAIN + '/' + a['slug'], "inLanguage": "fr-FR", **({"datePublished": a['date'][:10]} if a['date'] else {}), "dateModified": TODAY},
+           "mainEntityOfPage": DOMAIN + '/' + a['slug'], "inLanguage": "fr-FR", **({"datePublished": a['date'][:10]} if a['date'] else {}), "dateModified": a.get('updated') or TODAY},
           {"@context": "https://schema.org", **ORG},
           {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
               {"@type": "ListItem", "position": 1, "name": "Accueil", "item": DOMAIN + "/"},
