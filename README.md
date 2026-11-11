@@ -28,6 +28,7 @@ Les pages sont des fichiers `page.html` servies sans extension (`/page`) grâce 
 
 Module de devis intégré au CRM (même mot de passe). On dicte le chantier ; Claude propose les lignes à partir du catalogue ; on vérifie, on enregistre, on télécharge le PDF.
 
+- **Nouvelle demande dictée** : sur « + Nouvelle », bloc « Dicter la demande » ; Claude remplit nom, téléphone, e-mail, commune, type et message, on vérifie puis on ajoute. Sans clé API, le texte dicté va dans « Message du client ».
 - **Depuis une demande** : bouton « Créer un devis » sur la fiche. Le client est pré-rempli et le devis reste lié à la fiche.
 - **Lien avec le CRM** : à chaque enregistrement, le montant TTC est reporté sur la demande et noté dans l'historique. Devis « Envoyé » → demande « Devis envoyé » ; « Accepté » → « Gagnée » ; « Refusé » → « Perdue ». Un devis fait pour un nouveau client crée sa demande.
 - **Catalogue** : jamais dans ce dépôt (il est public). Onglet Catalogue › Importer, avec le fichier `catalogue-2026.json` fourni à part ; ensuite il se modifie dans l'interface. « Exporter » en fait une sauvegarde.

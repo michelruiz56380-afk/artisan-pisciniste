@@ -184,7 +184,7 @@ function layout(string $title, string $body): void { ?>
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title><?= h($title) ?> · CRM Artisan Pisciniste</title>
-<link rel="icon" href="/assets/img/favicon-48.png"><link rel="stylesheet" href="admin.css?v=1"></head>
+<link rel="icon" href="/assets/img/favicon-48.png"><link rel="stylesheet" href="admin.css?v=2"></head>
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="/assets/img/logo.png" alt="" width="30" height="30"><span>CRM <b>Artisan Pisciniste</b></span></a>
@@ -310,7 +310,20 @@ function page_form(?array $d): void {
       </div>
     <?php endif; ?>
 
-    <form method="post" class="grid">
+    <?php if ($isNew): ?>
+    <section class="card dictee" id="dictee">
+      <div class="dictee-head"><h2>Dicter la demande</h2>
+        <span class="muted small" id="dt-hint">Dites tout d'un trait : nom, téléphone, commune, projet. Claude remplit la fiche, vous vérifiez.</span></div>
+      <textarea id="dt-text" rows="4" placeholder="Ex. « Madame Sophie Martin, 06 12 34 56 78, à Theix. Elle veut une mini piscine avec volet, travaux au printemps. Disponible le samedi matin. »"></textarea>
+      <div class="dictee-actions">
+        <button type="button" class="btn" id="dt-mic" hidden>Dicter au micro</button>
+        <button type="button" class="btn btn-brand" id="dt-go">Remplir la fiche</button>
+        <span class="muted small" id="dt-msg" role="status"></span>
+      </div>
+    </section>
+    <?php endif; ?>
+
+    <form method="post" class="grid" id="f-demande">
       <input type="hidden" name="csrf" value="<?= h(csrf()) ?>"><input type="hidden" name="action" value="<?= $isNew ? 'create' : 'save' ?>"><input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
       <section class="card">
         <h2>Client et projet</h2>
@@ -339,6 +352,42 @@ function page_form(?array $d): void {
       <div class="savebar full"><button class="btn btn-brand"><?= $isNew ? 'Ajouter la demande' : 'Enregistrer' ?></button></div>
     </form>
 
+    <?php if ($isNew): ?>
+    <script>
+    (()=>{const $=id=>document.getElementById(id),ta=$('dt-text'),mic=$('dt-mic'),go=$('dt-go'),msg=$('dt-msg'),f=$('f-demande');if(!ta||!f)return;
+      const CSRF=<?= json_encode(csrf()) ?>;
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+      if(SR){mic.hidden=false}else{$('dt-hint').textContent="Dictez avec le micro du clavier (téléphone : touche micro · Windows : Win + H · Mac : Fn Fn), puis « Remplir la fiche »."}
+      mic.addEventListener('click',()=>{
+        if(rec){rec.stop();return}
+        const base=ta.value.trim()?ta.value.trimEnd()+' ':'';let fin='';
+        rec=new SR();rec.lang='fr-FR';rec.continuous=true;rec.interimResults=true;
+        rec.onresult=e=>{let tmp='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i]?.[0]?.transcript??'';if(e.results[i].isFinal)fin+=t;else tmp+=t}ta.value=(base+fin+tmp).replace(/\s+/g,' ')};
+        rec.onerror=e=>{msg.textContent=e.error==='not-allowed'||e.error==='service-not-allowed'?'Micro refusé : autorisez-le dans les réglages du navigateur.':e.error==='no-speech'?'Aucune parole détectée.':'Dictée interrompue.'};
+        rec.onend=()=>{rec=null;mic.textContent='Dicter au micro';mic.classList.remove('rec')};
+        try{rec.start();mic.textContent='Arrêter la dictée';mic.classList.add('rec');msg.textContent='Je vous écoute…'}catch{rec=null;msg.textContent="Le micro n'a pas pu démarrer."}
+      });
+      const put=(name,v)=>{const el=f.elements[name];if(!el||!v)return;
+        if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===v||o.text===v))el.add(new Option(v,v),0);
+        el.value=v;el.classList.add('filled');setTimeout(()=>el.classList.remove('filled'),1600)};
+      go.addEventListener('click',async()=>{
+        if(rec)rec.stop();
+        const text=ta.value.trim();if(!text){msg.textContent="Dictez ou tapez d'abord la demande.";ta.focus();return}
+        go.disabled=true;msg.textContent='Claude remplit la fiche…';
+        try{
+          const res=await fetch('devis.php?api=lead',{method:'POST',headers:{'content-type':'application/json','x-csrf':CSRF},body:JSON.stringify({transcript:text})});
+          const r=await res.json().catch(()=>({error:'Réponse illisible du serveur.'}));
+          if(!res.ok)throw new Error(r.error||'Analyse impossible.');
+          ['nom','tel','email','commune','type','message'].forEach(k=>put(k,String(r[k]??'').trim()));
+          msg.textContent='Fiche remplie : vérifiez puis « Ajouter la demande ».';f.elements.nom.focus();
+        }catch(e){
+          if(!f.elements.message.value.trim())put('message',text);
+          msg.textContent=(e.message||'Analyse impossible.')+' Le texte dicté a été placé dans « Message du client ».';
+        }finally{go.disabled=false}
+      });
+    })();
+    </script>
+    <?php endif; ?>
     <?php if (!$isNew):
       $dv = devis_db()->prepare('SELECT id, numero, statut, titre, total_ttc, updated_at FROM devis WHERE demande_id = ? ORDER BY created_at DESC'); $dv->execute([$d['id']]); $dvs = $dv->fetchAll(); ?>
     <section class="card" id="devis">

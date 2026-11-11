@@ -2,7 +2,8 @@
 /* DevisVoice — module devis du CRM Artisan Pisciniste
  * /admin/devis.php                 l'application (dictée, devis, catalogue, entreprise)
  * /admin/devis.php?demande=12      nouveau devis pré-rempli depuis une demande du CRM
- * /admin/devis.php?api=…           échanges JSON avec la page (réservés à l'admin connecté)
+ * /admin/devis.php?api=…           échanges JSON avec la page (réservés à l'admin connecté) ;
+ *                                  api=lead : dictée d'une nouvelle demande (fiche CRM)
  * Même mot de passe et même session que le CRM. */
 declare(strict_types=1);
 require dirname(__DIR__) . '/devis-db.php';
@@ -66,6 +67,8 @@ if ($api !== null) {
                 devis_delete((int)($in['id'] ?? 0)); out(200, ['ok' => true]);
             case 'analyze':
                 [$code, $res] = devis_analyze((string)($in['transcript'] ?? '')); out($code, $res);
+            case 'lead':
+                [$code, $res] = lead_from_dictation((string)($in['transcript'] ?? '')); out($code, $res);
             case 'catalog':
                 $c = $in['data'] ?? null;
                 if (!is_array($c) || !is_array($c['products'] ?? null) || !is_array($c['categories'] ?? null)) out(400, ['error' => 'Fichier catalogue non reconnu (il faut des « categories » et des « products »).']);
@@ -95,7 +98,7 @@ $v = @filemtime(__DIR__ . '/devis.js') ?: 1;
 <meta name="robots" content="noindex,nofollow"><meta name="csrf" content="<?= h($csrf) ?>">
 <title>Devis · CRM Artisan Pisciniste</title>
 <link rel="icon" href="/assets/img/favicon-48.png">
-<link rel="stylesheet" href="admin.css?v=1"><link rel="stylesheet" href="devis.css?v=<?= $v ?>"></head>
+<link rel="stylesheet" href="admin.css?v=2"><link rel="stylesheet" href="devis.css?v=<?= $v ?>"></head>
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="./"><img src="/assets/img/logo.png" alt="" width="30" height="30"><span>CRM <b>Artisan Pisciniste</b></span></a>
